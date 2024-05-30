@@ -241,14 +241,15 @@ class GPGroundTruthPredictor(GroundTruthPredictor):
             gt_loglik = td.Normal(loc=mean, scale=std).log_prob(yt[..., 0])
             gt_loglik = gt_loglik.sum(-1)
             gt_loglik = gt_loglik.to(dtype)
-
+            gt_loglik_joint = td.MultivariateNormal(loc=mean, covariance_matrix=cov).log_prob(yt[..., 0])
+            gt_loglik_joint = gt_loglik_joint.to(dtype)
         else:
-            gt_loglik = None
+            gt_loglik, gt_loglik_joint = None, None
 
         mean = mean.to(dtype)[:, :, None]
         std = std.to(dtype)[:, :, None]
 
-        return mean, std, gt_loglik
+        return mean, std, gt_loglik, gt_loglik_joint
 
     def sample_outputs(self, x: torch.Tensor) -> torch.Tensor:
         kernel = self.kernel.to(x)

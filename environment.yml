@@ -1,4 +1,4 @@
-name: tnpp
+name: ar-ddpm
 channels:
   - defaults
 dependencies:
@@ -81,4 +81,4 @@ dependencies:
     - virtualenv==20.26.2
     - wandb==0.17.0
     - yarl==1.9.4
-prefix: /opt/homebrew/Caskroom/miniconda/base/envs/tnpp
+prefix: /opt/homebrew/Caskroom/miniconda/base/envs/ar-ddpm

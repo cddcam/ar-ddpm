@@ -4,6 +4,8 @@ from plot import plot
 from tnp.utils.experiment_utils import initialize_experiment
 from tnp.utils.lightning_utils import LitWrapper
 
+import pdb
+
 
 def main():
     experiment, checkpointer = initialize_experiment()
@@ -13,23 +15,34 @@ def main():
     gen_val = experiment.generators.val
     optimiser = experiment.optimiser(model.parameters())
     epochs = experiment.params.epochs
+    scheduler = experiment.scheduler
 
-    def plot_fn(model, batches, name):
+    pdb.set_trace()
+
+    def plot_fn(model, batches, name, scheduler):
         plot(
             model=model,
             batches=batches,
             num_fig=min(5, len(batches)),
+            plot_ar_mode=experiment.misc.plot_ar_mode,
+            num_ar_samples=20,
             name=name,
+            pred_fn=experiment.misc.pred_fn,
+            scheduler=scheduler,
         )
 
     lit_model = LitWrapper(
         model=model,
+        scheduler=scheduler,
         optimiser=optimiser,
         loss_fn=experiment.misc.loss_fn,
         pred_fn=experiment.misc.pred_fn,
         plot_fn=plot_fn,
         checkpointer=checkpointer,
         plot_interval=experiment.misc.plot_interval,
+        subsample_targets=experiment.misc.subsample_targets,
+        num_samples=experiment.misc.num_loglik_samples,
+        split_batch=experiment.misc.split_batch,
     )
     logger = pl.loggers.WandbLogger() if experiment.misc.logging else False
     trainer = pl.Trainer(
