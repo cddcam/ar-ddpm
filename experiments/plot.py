@@ -3,6 +3,7 @@ import os
 from typing import Callable, List, Tuple, Union
 
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
@@ -41,6 +42,7 @@ def plot(
     pred_fn: Callable = np_pred_fn,
     num_np_samples: int = 16,
     test_sampling: bool = False,
+    subsample_targets: bool = False,
 ):
     # Get dimension of input data
     dim = batches[0].xc.shape[-1]
@@ -77,7 +79,12 @@ def plot(
             else:
                 with torch.no_grad():
                     if test_sampling:
-                        noised_samples_history, plot_distributions = pred_fn(model, batch, scheduler, x_plot)
+                        noised_samples_history, plot_distributions = pred_fn(
+                            model, 
+                            batch, 
+                            scheduler, 
+                            x_plot, 
+                            subsample_targets=subsample_targets)
                         y_plot_pred_dist = plot_distributions[-1]
                         if len(scheduler) > 0:
                             noised_targets = noised_samples_history[-2]
@@ -108,16 +115,28 @@ def plot(
                 c="k",
                 label="Context",
                 s=30,
+                zorder=4,
             )
 
-            if noised_targets is not None:
+            try:
+                if noised_targets is not None:
+                    plt.scatter(
+                            xt[0, :, 0].cpu().numpy(),
+                            noised_targets[0, :, 0].cpu().numpy(),
+                            c="g",
+                            label="Noised Target",
+                            s=30,
+                            zorder=4,
+                        )
+            except:
                 plt.scatter(
-                        xt[0, :, 0].cpu().numpy(),
-                        noised_targets[0, :, 0].cpu().numpy(),
-                        c="g",
-                        label="Noised Target",
-                        s=30,
-                    )
+                            xt[0, :, 0].numpy(),
+                            noised_targets[0, :, 0].cpu().numpy(),
+                            c="g",
+                            label="Noised Target",
+                            s=30,
+                            zorder=4,
+                        )
 
             if plot_target:
                 plt.scatter(
@@ -126,6 +145,7 @@ def plot(
                     c="r",
                     label="Target",
                     s=30,
+                    zorder=4,
                 )
 
             # Plot model predictions
@@ -134,6 +154,7 @@ def plot(
                 mean[0, :, 0].cpu(),
                 c="tab:blue",
                 lw=3,
+                zorder=5,
             )
 
             plt.fill_between(
@@ -184,7 +205,8 @@ def plot(
                     gt_mean[0, :].cpu(),
                     "--",
                     color="tab:purple",
-                    lw=3,
+                    lw=2,
+                    zorder=0,
                 )
 
                 plt.plot(
@@ -192,7 +214,8 @@ def plot(
                     gt_mean[0, :].cpu() + 2 * gt_std[0, :].cpu(),
                     "--",
                     color="tab:purple",
-                    lw=3,
+                    lw=2,
+                    zorder=0,
                 )
 
                 plt.plot(
@@ -201,7 +224,8 @@ def plot(
                     "--",
                     color="tab:purple",
                     label="Ground truth",
-                    lw=3,
+                    lw=2,
+                    zorder=0,
                 )
 
                 title_str += f" GT NLL = {gt_nll:.3f}"

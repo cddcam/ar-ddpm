@@ -103,7 +103,7 @@ def discrete_denoising_loss_fn(
         model: model to train.
         batch: batch of data.
         scheduler: DDPM scheduler.
-        subsample_targets: whether to subsample the targets at each noise level.
+        subsample_targets: whether to subsample the targets that we condition on.
 
     Returns:
         loss: average negative KL Div.
@@ -117,8 +117,6 @@ def discrete_denoising_loss_fn(
         # from the noise level above  (tt + 1)
         noise = torch.randn(batch.yt.shape, device=batch.yt.device)
         noised_targets = scheduler.add_noise(batch.yt, noise, tt)
-        # TODO: Shouldn't this be ?
-        # noised_targets = scheduler.add_noise(batch.yt, noise, tt + 1)
         if subsample_targets:
             # Only predict based on a subset of noised up targets
             x_prob = np.random.uniform()
@@ -172,7 +170,7 @@ def discrete_denoising_pred_fn(
         batch: batch of data.
         scheduler: DDPM scheduler.
         x_plot: x locations for plotting.
-        subsample_targets: whether to subsample the targets at each noise level.
+        subsample_targets: whether to subsample the targets that we condition upon.
 
     Returns:
         pred_dist_target: Predictive distribution at target locations.
@@ -231,6 +229,7 @@ def discrete_denoising_sampling(
         batch: Batch, 
         scheduler: BaseScheduler,
         x_plot: Optional[torch.FloatTensor] = None,
+        subsample_targets: bool = False,
 ):
     """Sample from the diffusion process, starting from the highest noise level.
 
@@ -246,12 +245,21 @@ def discrete_denoising_sampling(
         plot_distributions: Distributions for plotting.
     """
     # Context points are always unnoised (t=0)
-    # Start diffusion process for the target points from the highest noise level (t=T)
     tc = torch.zeros(batch.xc.shape[0], batch.xc.shape[1], device=batch.xc.device, dtype=torch.int)
-    tt = torch.ones(batch.xt.shape[0], batch.xt.shape[1], device=batch.xt.device, dtype=torch.int) * len(scheduler)
+    
+    # If we subsample the targets, sample one in every 2**t, where t is the diffusion time
+    # (i.e. very few in the highest layers, and all at t=0)
+    if subsample_targets:
+        sorted, _ = torch.sort(batch.xt, dim=1)
+        current_xt = sorted[:, ::2**len(scheduler)]
+    else:
+        current_xt = batch.xt
+    
+    # Start diffusion process for the target points from the highest noise level (t=T)
+    tt = torch.ones(batch.xt.shape[0], current_xt.shape[1], device=batch.xt.device, dtype=torch.int) * len(scheduler)
 
-    # Get predictive distribution of targets at the highest noise level t=T
-    pred_dist = model(batch.xc, batch.yc, batch.xt, tc, tt)
+    # Get predictive distribution of the (subsampled) targets at the highest noise level t=T
+    pred_dist = model(batch.xc, batch.yc, current_xt, tc, tt)
 
     noised_samples = scheduler.step(pred_dist, tt[0, 0])
 
@@ -265,15 +273,18 @@ def discrete_denoising_sampling(
 
     # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
     for t in range(len(scheduler) - 1, -1, -1):
-        tt = torch.ones(batch.xt.shape[0], batch.xt.shape[1], device=batch.xt.device, dtype=torch.int) * t
         # Context becomes unnoised context + previous noised up targets 
         # (from noise level above, hence we append tt + 1)
         yc_t = torch.cat([batch.yc, noised_samples], dim=1)
-        xc_t = torch.cat([batch.xc, batch.xt], dim=1)
+        xc_t = torch.cat([batch.xc, current_xt], dim=1)
         tc_t = torch.cat([tc, tt+1], dim=1)
+        # If we subsample the targets, sample one in every 2**t
+        if subsample_targets:
+            current_xt = sorted[:, ::2**t]
+        tt = torch.ones(batch.xt.shape[0], current_xt.shape[1], device=batch.xt.device, dtype=torch.int) * t
         
         # Get prediction of noised targets at the current diffusion timestep
-        pred_dist = model(xc_t, yc_t, batch.xt, tc_t, tt)
+        pred_dist = model(xc_t, yc_t, current_xt, tc_t, tt)
         noised_samples = scheduler.step(pred_dist, tt[0, 0])
         noised_samples_history += [noised_samples.clone()]
 
@@ -290,6 +301,7 @@ def discrete_denoising_loglik(
         scheduler: BaseScheduler,
         num_samples: int = 100,
         split_batch: bool = False,
+        subsample_targets: bool = False,
 ):
     """Compute log-likelihood .
 
@@ -299,6 +311,7 @@ def discrete_denoising_loglik(
         scheduler: DDPM scheduler.
         num_samples: Number of samples used in MCMC sampling.
         split_batch: whether to split the batch.
+        subsample_targets: whether to subsample the targets at each noise level.
 
     Returns:
         loglik: Average log-likelihood.
@@ -331,17 +344,27 @@ def discrete_denoising_loglik(
         # Split the batch
         for i in range(0, batch.xc.shape[0]):
             tc = torch.zeros(num_samples, batch.xc.shape[1], device=batch.xc.device, dtype=torch.int)
-            tt = torch.ones(
-                num_samples, 
-                batch.xt.shape[1], 
-                device=batch.xt.device, 
-                dtype=torch.int) * len(scheduler)
             
             # Extract context and target for the current batch
             xc = batch.xc[i: i + 1].expand(num_samples, *((-1,)*(len(batch.xc.shape) - 1)))
             yc = batch.yc[i: i + 1].expand(num_samples, *((-1,)*(len(batch.yc.shape) - 1)))
             xt = batch.xt[i: i + 1].expand(num_samples, *((-1,)*(len(batch.xt.shape) - 1)))
             yt = batch.yt[i: i + 1].expand(num_samples, *((-1,)*(len(batch.yt.shape) - 1)))
+
+            # If we subsample the targets, sample one in every 2**t, 
+            # where t is the diffusion time (i.e. very few in the highest 
+            # layers, and all at t=0)
+            if subsample_targets:
+                sorted, _ = torch.sort(xt, dim=1)
+                current_xt = sorted[:, ::2**len(scheduler)]
+            else:
+                current_xt = xt
+
+            tt = torch.ones(
+                num_samples, 
+                current_xt.shape[1], 
+                device=batch.xt.device, 
+                dtype=torch.int) * len(scheduler)
 
             # Get predictive distribution for the noised targets at the highest noise level (t=T)
             pred_dist = model(xc, yc, xt, tc, tt)
@@ -350,16 +373,21 @@ def discrete_denoising_loglik(
 
             # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
             for t in range(len(scheduler) - 1, -1, -1):
-                tt = torch.ones(
-                    num_samples, 
-                    batch.xt.shape[1], 
-                    device=batch.xt.device, 
-                    dtype=torch.int) * t
                 # Context becomes unnoised context + previous noised up targets 
                 # (from noise level above, hence we append tt + 1)
                 yc_t = torch.cat([yc, noised_samples], dim=1)
                 xc_t = torch.cat([xc, xt], dim=1)
                 tc_t = torch.cat([tc, tt+1], dim=1)
+                
+                # If we subsample the targets, sample one in every 2**t
+                if subsample_targets:
+                    current_xt = sorted[:, ::2**t]
+
+                tt = torch.ones(
+                    num_samples, 
+                    current_xt.shape[1], 
+                    device=batch.xt.device, 
+                    dtype=torch.int) * t
                 
                 pred_dist = model(xc_t, yc_t, xt, tc_t, tt)
                 noised_samples = scheduler.step(pred_dist, tt[0, 0])
@@ -389,16 +417,26 @@ def discrete_denoising_loglik(
 
     else:
         tc = torch.zeros(batch.xc.shape[0]*num_samples, batch.xc.shape[1], device=batch.xc.device, dtype=torch.int)
-        tt = torch.ones(
-            batch.xt.shape[0]*num_samples, 
-            batch.xt.shape[1], 
-            device=batch.xt.device, 
-            dtype=torch.int) * len(scheduler)
-        
+
         xc = batch.xc[:, None].expand(-1, num_samples, *((-1,)*(len(batch.xc.shape) - 1))).reshape(-1, *batch.xc.shape[1:])
         yc = batch.yc[:, None].expand(-1, num_samples, *((-1,)*(len(batch.yc.shape) - 1))).reshape(-1, *batch.yc.shape[1:])
         xt = batch.xt[:, None].expand(-1, num_samples, *((-1,)*(len(batch.xt.shape) - 1))).reshape(-1, *batch.xt.shape[1:])
         yt = batch.yt[:, None].expand(-1, num_samples, *((-1,)*(len(batch.yt.shape) - 1))).reshape(-1, *batch.yt.shape[1:])
+
+        # If we subsample the targets, sample one in every 2**t, 
+        # where t is the diffusion time (i.e. very few in the highest 
+        # layers, and all at t=0)
+        if subsample_targets:
+            sorted, _ = torch.sort(xt, dim=1)
+            current_xt = sorted[:, ::2**len(scheduler)]
+        else:
+            current_xt = xt
+
+        tt = torch.ones(
+            num_samples, 
+            current_xt.shape[1], 
+            device=batch.xt.device, 
+            dtype=torch.int) * len(scheduler)
 
         # Get predictive distribution for the noised targets at the highest noise level (t=T)
         pred_dist = model(xc, yc, xt, tc, tt)
@@ -407,16 +445,21 @@ def discrete_denoising_loglik(
 
         # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
         for t in range(len(scheduler) - 1, -1, -1):
-            tt = torch.ones(
-                batch.xt.shape[0]*num_samples, 
-                batch.xt.shape[1], 
-                device=batch.xt.device, 
-                dtype=torch.int) * t
             # Context becomes unnoised context + previous noised up targets 
             # (from noise level above, hence we append tt + 1)
             yc_t = torch.cat([yc, noised_samples], dim=1)
             xc_t = torch.cat([xc, xt], dim=1)
             tc_t = torch.cat([tc, tt+1], dim=1)
+
+            # If we subsample the targets, sample one in every 2**t
+            if subsample_targets:
+                current_xt = sorted[:, ::2**t]
+
+            tt = torch.ones(
+                num_samples, 
+                current_xt.shape[1], 
+                device=batch.xt.device, 
+                dtype=torch.int) * t
             
             pred_dist = model(xc_t, yc_t, xt, tc_t, tt)
             noised_samples = scheduler.step(pred_dist, tt[0, 0])
@@ -426,8 +469,6 @@ def discrete_denoising_loglik(
             loglik_joint = None
         else:
             loglik_joint = pred_dist.log_prob(yt[..., 0])  
-            loglik_joint = loglik_joint.reshape(-1, num_samples)
-            # Is this needed twice?
             loglik_joint = loglik_joint.reshape(-1, num_samples)
             loglik_joint = (torch.logsumexp(loglik_joint, dim=1) - np.log(float(num_samples))) / yt[0, ..., 0].numel() 
             loglik_joint = loglik_joint.mean()
@@ -559,6 +600,7 @@ def test_epoch(
     loglik_fn: Callable = np_loss_fn,
     num_samples: int = 1,
     split_batch: bool = False,
+    subsample_targets: bool = False,
 ) -> Tuple[Dict[str, Any], List[Batch]]:
     result = defaultdict(list)
     batches = []
@@ -575,6 +617,7 @@ def test_epoch(
                 scheduler=scheduler, 
                 num_samples=num_samples, 
                 split_batch=split_batch,
+                subsample_targets=subsample_targets,
                 )
 
         if isinstance(batch, SyntheticBatch) and batch.gt_pred is not None:

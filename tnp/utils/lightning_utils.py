@@ -25,6 +25,7 @@ class LitWrapper(pl.LightningModule):
         subsample_targets: bool = False,
         num_samples: int = 1,
         split_batch: bool = False,
+        subsample_test_targets: bool = False,
     ):
         super().__init__()
 
@@ -42,6 +43,7 @@ class LitWrapper(pl.LightningModule):
         self.subsample_targets = subsample_targets
         self.num_samples = num_samples
         self.split_batch = split_batch
+        self.subsample_test_targets = subsample_test_targets
         self.val_outputs: List[Any] = []
         self.test_outputs: List[Any] = []
         self.train_losses: List[Any] = []
@@ -96,6 +98,7 @@ class LitWrapper(pl.LightningModule):
             scheduler=self.scheduler,
             num_samples=self.num_samples,
             split_batch=self.split_batch,
+            subsample_targets=self.subsample_test_targets,
         )
         result["loglik"] = loglik.cpu()
 

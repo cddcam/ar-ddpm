@@ -61,15 +61,7 @@ likelihood:
 optimiser:
   _target_: torch.optim.AdamW
   _partial_: True
-  lr: 0.0005
-
-scheduler:
-  _target_: tnp.schedulers.ddpm_scheduler.DDPMScheduler
-  num_train_timesteps: 1
-  beta_start: 0.02
-  beta_schedule: constant
-  variance_type: learned
-  prediction_type: mean
+  lr: 5.0e-4
 
 params:
   epochs: 200
@@ -85,8 +77,7 @@ misc:
   resume_from_checkpoint: null
   plot_ar_mode: False
   gradient_clip_val: 0.5
-  plot_interval: 10
+  plot_interval: 50
   logging: True
   subsample_targets: True
-  num_loglik_samples: 100
   split_batch: True

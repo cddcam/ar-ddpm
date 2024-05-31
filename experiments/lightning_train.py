@@ -26,6 +26,7 @@ def main():
             name=name,
             pred_fn=experiment.misc.pred_fn,
             scheduler=scheduler,
+            subsample_targets=experiment.misc.subsample_targets,
         )
 
     lit_model = LitWrapper(
@@ -40,6 +41,7 @@ def main():
         subsample_targets=experiment.misc.subsample_targets,
         num_samples=experiment.misc.num_loglik_samples,
         split_batch=experiment.misc.split_batch,
+        subsample_test_targets=experiment.misc.subsample_test_targets,
     )
     logger = pl.loggers.WandbLogger() if experiment.misc.logging else False
     trainer = pl.Trainer(

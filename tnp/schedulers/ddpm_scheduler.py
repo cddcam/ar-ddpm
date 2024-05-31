@@ -227,9 +227,8 @@ class DDPMScheduler(BaseScheduler):
         # If using non-diagonal covariance (i.e. InnerprodGaussianLikelihood)
         if not isinstance(model_output, td.Normal):
             # For the noised up variables - sample, for the unnoised variable - return mean
-            # TODO: Shouldn't we add noise here?
             if t > 0:
-                return model_output.rsample((1,))[0][..., None] # + variance
+                return model_output.rsample((1,))[0][..., None]
             return model_output.mean[..., None]
 
         if self.variance_type in ["learned", "learned_range"]:

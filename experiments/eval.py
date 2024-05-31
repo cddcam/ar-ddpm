@@ -29,7 +29,8 @@ def main():
                                generator=gen_test, 
                                loglik_fn=discrete_denoising_loglik, 
                                num_samples=experiment.misc.num_loglik_samples, 
-                               split_batch=experiment.misc.split_batch)
+                               split_batch=experiment.misc.split_batch,
+                               subsample_targets=experiment.misc.subsample_test_targets)
 
         eval_name = wandb.run.name + "/" + eval_name
 
@@ -46,6 +47,7 @@ def main():
             plot_target=False,
             pred_fn=discrete_denoising_sampling,
             test_sampling=True,
+            subsample_targets=experiment.misc.subsample_test_targets,
         )
 
         return
@@ -79,7 +81,8 @@ def main():
                                          generator=gen_test, 
                                          loglik_fn=discrete_denoising_loglik, 
                                          num_samples=experiment.misc.num_loglik_samples, 
-                                         split_batch=experiment.misc.split_batch)
+                                         split_batch=experiment.misc.split_batch,
+                                         subsample_targets=experiment.misc.subsample_test_targets,)
 
     if experiment.misc.logging:
         wandb.run.summary["num_params"] = num_params
@@ -109,6 +112,7 @@ def main():
         plot_target=False,
         pred_fn=discrete_denoising_sampling,
         test_sampling=True,
+        subsample_targets=experiment.misc.subsample_test_targets,
     )
 
 
