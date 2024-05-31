@@ -85,7 +85,7 @@ class InnerprodGaussianLikelihood(Likelihood):
         
         Arguments:
             x : torch.tensor, (B, T, C)
-            t: torch.tensor, (B, T)
+            t: int
             
         Returns:
             mean  : torch.tensor, (B, T)

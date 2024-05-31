@@ -4,7 +4,6 @@ from plot import plot
 from tnp.utils.experiment_utils import initialize_experiment
 from tnp.utils.lightning_utils import LitWrapper
 
-import pdb
 
 
 def main():
@@ -16,8 +15,6 @@ def main():
     optimiser = experiment.optimiser(model.parameters())
     epochs = experiment.params.epochs
     scheduler = experiment.scheduler
-
-    pdb.set_trace()
 
     def plot_fn(model, batches, name, scheduler):
         plot(
