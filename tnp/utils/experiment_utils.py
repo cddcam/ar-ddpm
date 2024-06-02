@@ -277,7 +277,7 @@ def discrete_denoising_sampling(
         # (from noise level above, hence we append tt + 1)
         yc_t = torch.cat([batch.yc, noised_samples], dim=1)
         xc_t = torch.cat([batch.xc, current_xt], dim=1)
-        tc_t = torch.cat([tc, tt+1], dim=1)
+        tc_t = torch.cat([tc, tt], dim=1)
         # If we subsample the targets, sample one in every 2**t
         if subsample_targets:
             current_xt = sorted[:, ::2**t]
@@ -367,7 +367,7 @@ def discrete_denoising_loglik(
                 dtype=torch.int) * len(scheduler)
 
             # Get predictive distribution for the noised targets at the highest noise level (t=T)
-            pred_dist = model(xc, yc, xt, tc, tt)
+            pred_dist = model(xc, yc, current_xt, tc, tt)
 
             noised_samples = scheduler.step(pred_dist, tt[0, 0])
 
@@ -376,8 +376,8 @@ def discrete_denoising_loglik(
                 # Context becomes unnoised context + previous noised up targets 
                 # (from noise level above, hence we append tt + 1)
                 yc_t = torch.cat([yc, noised_samples], dim=1)
-                xc_t = torch.cat([xc, xt], dim=1)
-                tc_t = torch.cat([tc, tt+1], dim=1)
+                xc_t = torch.cat([xc, current_xt], dim=1)
+                tc_t = torch.cat([tc, tt], dim=1)
                 
                 # If we subsample the targets, sample one in every 2**t
                 if subsample_targets:
@@ -389,7 +389,7 @@ def discrete_denoising_loglik(
                     device=batch.xt.device, 
                     dtype=torch.int) * t
                 
-                pred_dist = model(xc_t, yc_t, xt, tc_t, tt)
+                pred_dist = model(xc_t, yc_t, current_xt, tc_t, tt)
                 noised_samples = scheduler.step(pred_dist, tt[0, 0])
 
             if isinstance(pred_dist, td.Normal):
@@ -439,7 +439,7 @@ def discrete_denoising_loglik(
             dtype=torch.int) * len(scheduler)
 
         # Get predictive distribution for the noised targets at the highest noise level (t=T)
-        pred_dist = model(xc, yc, xt, tc, tt)
+        pred_dist = model(xc, yc, current_xt, tc, tt)
 
         noised_samples = scheduler.step(pred_dist, tt[0, 0])
 
@@ -449,7 +449,7 @@ def discrete_denoising_loglik(
             # (from noise level above, hence we append tt + 1)
             yc_t = torch.cat([yc, noised_samples], dim=1)
             xc_t = torch.cat([xc, xt], dim=1)
-            tc_t = torch.cat([tc, tt+1], dim=1)
+            tc_t = torch.cat([tc, tt], dim=1)
 
             # If we subsample the targets, sample one in every 2**t
             if subsample_targets:
@@ -461,7 +461,7 @@ def discrete_denoising_loglik(
                 device=batch.xt.device, 
                 dtype=torch.int) * t
             
-            pred_dist = model(xc_t, yc_t, xt, tc_t, tt)
+            pred_dist = model(xc_t, yc_t, current_xt, tc_t, tt)
             noised_samples = scheduler.step(pred_dist, tt[0, 0])
 
         if isinstance(pred_dist, td.Normal):
@@ -684,6 +684,10 @@ def create_default_config() -> DictConfig:
             },
             "pred_fn": {
                 "_target_": "tnp.utils.experiment_utils.discrete_denoising_pred_fn",
+                "_partial_": True,
+            },
+            "loglik_fn": {
+                "_target_": "tnp.utils.experiment_utils.discrete_denoising_loglik",
                 "_partial_": True,
             },
         }

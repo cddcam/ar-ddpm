@@ -121,21 +121,21 @@ def plot(
             try:
                 if noised_targets is not None:
                     plt.scatter(
+                            xt[0, :, 0][::2**(tt + 1)].cpu().numpy(),
+                            noised_targets[0, :, 0].cpu().numpy(),
+                            c="g",
+                            label="Noised Target",
+                            s=30,
+                            zorder=3,
+                        )
+            except:
+                plt.scatter(
                             xt[0, :, 0].cpu().numpy(),
                             noised_targets[0, :, 0].cpu().numpy(),
                             c="g",
                             label="Noised Target",
                             s=30,
-                            zorder=4,
-                        )
-            except:
-                plt.scatter(
-                            xt[0, :, 0].numpy(),
-                            noised_targets[0, :, 0].cpu().numpy(),
-                            c="g",
-                            label="Noised Target",
-                            s=30,
-                            zorder=4,
+                            zorder=3,
                         )
 
             if plot_target:
@@ -145,7 +145,7 @@ def plot(
                     c="r",
                     label="Target",
                     s=30,
-                    zorder=4,
+                    zorder=3,
                 )
 
             # Plot model predictions

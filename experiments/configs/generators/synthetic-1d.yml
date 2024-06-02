@@ -43,7 +43,7 @@ generators:
     max_nt: 128
     context_range: [[-2.0, 2.0]]
     target_range: [[-3.0, 3.0]]
-    samples_per_epoch: 4096
+    samples_per_epoch: 16000
     batch_size: 16
     deterministic: True
 
@@ -60,6 +60,7 @@ misc:
   subplots: False
   savefig: True
   logging: True
+  lightning_eval: True
   num_loglik_samples: 100
   split_batch: True
   subsample_test_targets: True

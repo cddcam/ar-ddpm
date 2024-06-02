@@ -57,7 +57,14 @@ def main():
     wandb.run.summary["num_params"] = num_params
 
     if experiment.misc.lightning_eval:
-        lit_model = LitWrapper(model)
+        lit_model = LitWrapper(
+            model=model, 
+            scheduler=scheduler,
+            loglik_fn=discrete_denoising_loglik,
+            num_samples=experiment.misc.num_loglik_samples,
+            split_batch=experiment.misc.split_batch,
+            subsample_test_targets=experiment.misc.subsample_test_targets,
+            )
         trainer = pl.Trainer(devices=1)
         trainer.test(model=lit_model, dataloaders=gen_test)
         test_result = {
@@ -68,12 +75,22 @@ def main():
         test_result["mean_loglik"] = loglik.mean()
         test_result["std_loglik"] = loglik.std() / (len(loglik) ** 0.5)
 
+        if "loglik_joint" in test_result:
+            loglik_joint = torch.stack(test_result["loglik_joint"])
+            test_result["mean_loglik_joint"] = loglik_joint.mean()
+            test_result["std_loglik_joint"] = loglik_joint.std() / (len(loglik_joint) ** 0.5)
+
         if "gt_loglik" in test_result:
             gt_loglik = torch.stack(test_result["gt_loglik"])
             test_result["mean_gt_loglik"] = gt_loglik.mean()
             test_result["std_gt_loglik"] = gt_loglik.std() / (len(gt_loglik) ** 0.5)
+            gt_loglik_joint = torch.stack(test_result["gt_loglik_joint"])
+            test_result["mean_gt_loglik_joint"] = gt_loglik_joint.mean()
+            test_result["std_gt_loglik_joint"] = gt_loglik_joint.std() / (len(gt_loglik_joint) ** 0.5)
 
         batches = test_result["batch"]
+        print("Loglik joint", test_result["mean_loglik_joint"])
+        print("GT Loglik joint", test_result["mean_gt_loglik_joint"])
 
     else:
         test_result, batches = test_epoch(model=model, 

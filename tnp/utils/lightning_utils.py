@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 from ..data.base import Batch
-from .experiment_utils import ModelCheckpointer, np_loss_fn, np_pred_fn
+from .experiment_utils import ModelCheckpointer, np_loss_fn, np_pred_fn, discrete_denoising_loglik
 from ..schedulers.base import BaseScheduler
 
 
@@ -101,6 +101,8 @@ class LitWrapper(pl.LightningModule):
             subsample_targets=self.subsample_test_targets,
         )
         result["loglik"] = loglik.cpu()
+        if loglik_joint is not None:
+            result["loglik_joint"] = loglik_joint.cpu()
 
         if hasattr(batch, "gt_pred") and batch.gt_pred is not None:
             _, _, gt_loglik, gt_loglik_joint = batch.gt_pred(
