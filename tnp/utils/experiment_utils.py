@@ -335,7 +335,7 @@ def discrete_denoising_loglik(
             loglik = td.Normal(loc=pred_dist.mean, scale=std).log_prob(batch.yt[..., 0]).sum() / batch.yt[..., 0].numel()
 
             # For the joint distribution, use the non-diagonal covariance
-            loglik_joint = pred_dist.log_prob(batch.yt[..., 0]).sum() / batch.yt[0, ..., 0].numel()
+            loglik_joint = pred_dist.log_prob(batch.yt[..., 0]).sum() / batch.yt[..., 0].numel()
             return loglik, loglik_joint
 
     if split_batch:
@@ -433,7 +433,7 @@ def discrete_denoising_loglik(
             current_xt = xt
 
         tt = torch.ones(
-            num_samples, 
+            batch.xc.shape[0]*num_samples, 
             current_xt.shape[1], 
             device=batch.xt.device, 
             dtype=torch.int) * len(scheduler)
@@ -456,7 +456,7 @@ def discrete_denoising_loglik(
                 current_xt = sorted[:, ::2**t]
 
             tt = torch.ones(
-                num_samples, 
+                batch.xc.shape[0]*num_samples, 
                 current_xt.shape[1], 
                 device=batch.xt.device, 
                 dtype=torch.int) * t
@@ -470,7 +470,7 @@ def discrete_denoising_loglik(
         else:
             loglik_joint = pred_dist.log_prob(yt[..., 0])  
             loglik_joint = loglik_joint.reshape(-1, num_samples)
-            loglik_joint = (torch.logsumexp(loglik_joint, dim=1) - np.log(float(num_samples))) / yt[0, ..., 0].numel() 
+            loglik_joint = (torch.logsumexp(loglik_joint, dim=1) - np.log(float(num_samples))) / (yt[0, ..., 0].numel()*batch.xc.shape[0])
             loglik_joint = loglik_joint.mean()
 
             std = torch.diagonal(pred_dist.covariance_matrix, dim1=-2, dim2=-1).sqrt()
@@ -478,7 +478,7 @@ def discrete_denoising_loglik(
             loglik = loglik.sum(dim=list(range(1, len(yt[..., 0].shape))))     
 
         loglik = loglik.reshape(-1, num_samples)
-        loglik = (torch.logsumexp(loglik, dim=1) - np.log(float(num_samples))) / yt[0, ..., 0].numel()
+        loglik = (torch.logsumexp(loglik, dim=1) - np.log(float(num_samples))) / (yt[0, ..., 0].numel()*batch.xc.shape[0])
         loglik = loglik.mean()
 
         return loglik, loglik_joint

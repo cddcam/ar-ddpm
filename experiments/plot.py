@@ -259,10 +259,11 @@ def plot(
             # Set axis limits
             plt.xlim(x_range)
             # plt.ylim(y_lim)
-            y_max = 0.25 + max(gt_mean[0, ...] + 2 * gt_std[0, ...])
-            y_min = -0.25 + min(gt_mean[0, ...] - 2 * gt_std[0, ...])
-            y_lim = (y_min.cpu(), y_max.cpu())
-            plt.ylim(y_lim)
+            if batch.gt_pred is not None:
+                y_max = 0.25 + max(gt_mean[0, ...] + 2 * gt_std[0, ...])
+                y_min = -0.25 + min(gt_mean[0, ...] - 2 * gt_std[0, ...])
+                y_lim = (y_min.cpu(), y_max.cpu())
+                plt.ylim(y_lim)
 
             plt.xticks(fontsize=24)
             plt.yticks(fontsize=24)
