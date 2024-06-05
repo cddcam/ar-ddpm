@@ -34,7 +34,7 @@ class SquareWaveGeneratorBase(SyntheticGenerator):
             1.0, 0.0)
         y = f + self.noise_std * torch.randn_like(f)
 
-        return y, None
+        return y, None, ("squarewave", freq, offset)
 
     def sample_freq(self) -> torch.Tensor:
         # Sample frequency.

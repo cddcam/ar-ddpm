@@ -15,6 +15,7 @@ class SyntheticBatch(Batch):
     gt_std: Optional[torch.Tensor] = None
     gt_loglik: Optional[torch.Tensor] = None
     gt_pred: Optional[GroundTruthPredictor] = None
+    params: Optional[tuple] = None
 
 
 class SyntheticGenerator(DataGenerator, ABC):
@@ -68,7 +69,7 @@ class SyntheticGenerator(DataGenerator, ABC):
     ) -> SyntheticBatch:
         # Sample inputs, then outputs given inputs
         x = self.sample_inputs(nc=nc, nt=nt, batch_shape=batch_shape)
-        y, gt_pred = self.sample_outputs(x=x)
+        y, gt_pred, params = self.sample_outputs(x=x)
 
         xc = x[:, :nc, :]
         yc = y[:, :nc, :]
@@ -83,6 +84,7 @@ class SyntheticGenerator(DataGenerator, ABC):
             xt=xt,
             yt=yt,
             gt_pred=gt_pred,
+            params=params,
         )
 
     @abstractmethod

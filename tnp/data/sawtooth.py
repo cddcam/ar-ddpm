@@ -38,7 +38,7 @@ class SawtoothGeneratorBase(SyntheticGenerator):
         ) % 1
         y = f + self.noise_std * torch.randn_like(f)
 
-        return y, None
+        return y, None, ("sawtooth", freq, offset, direction)
 
     def sample_freq(self) -> torch.Tensor:
         # Sample frequency.

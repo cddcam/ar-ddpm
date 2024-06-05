@@ -1,8 +1,28 @@
+from abc import ABC
 from typing import Callable
 
 import gpytorch
 import torch
+from check_shapes import check_shapes
+from torch import nn
 
+from .mlp import MLP
+
+
+class Kernel(nn.Module, ABC):
+    pass
+
+class MLPKernel(Kernel):
+    def __init__(self, **kwargs):
+        super().__init__()
+
+        self.mlp = MLP(**kwargs)
+
+    @check_shapes("diff: [m, n1, n2, dx]", "return: [m, n1, n2, dout]")
+    def forward(self, diff: torch.Tensor) -> torch.Tensor:
+        dots = self.mlp(diff)
+
+        return dots
 
 class GibbsKernel(gpytorch.kernels.Kernel):
     def __init__(

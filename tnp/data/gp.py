@@ -179,7 +179,7 @@ class GPGenerator(GPGeneratorBase):
         gt_pred = self.set_up_gp()
         y = gt_pred.sample_outputs(x)
 
-        return y.to(torch.float32), gt_pred
+        return y.to(torch.float32), gt_pred, None
 
 
 class RandomScaleGPGenerator(GPGenerator, SyntheticGeneratorUniformInput):

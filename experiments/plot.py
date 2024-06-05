@@ -229,6 +229,37 @@ def plot(
                 )
 
                 title_str += f" GT NLL = {gt_nll:.3f}"
+            
+            elif isinstance(batch, SyntheticBatch) and batch.params is not None:
+                if batch.params[0] == "squarewave":
+                    _, freq, offset = batch.params
+                    f = torch.where(
+                        torch.floor(x_plot[0, :, 0] * freq[0, ...] - offset[0, ...]) % 2 == 0, 
+                        1.0, 0.0)
+                    plt.plot(
+                        x_plot[0, :, 0].cpu(), 
+                        f.cpu(), 
+                        "--",
+                        color="tab:purple",
+                        label="Ground truth",
+                        lw=2,
+                        zorder=0,
+                    )
+                elif batch.params[0] == "sawtooth":
+                    _, freq, offset, direction = batch.params
+                    f = (
+                        freq[0, ...] * (x_plot[0, :, 0] * direction[0, ...] - offset[0, ...])
+                    ) % 1
+                    plt.plot(
+                        x_plot[0, :, 0].cpu(), 
+                        f.cpu(), 
+                        "--",
+                        color="tab:purple",
+                        label="Ground truth",
+                        lw=2,
+                        zorder=0,
+                    )
+
 
             if plot_ar_mode:
                 ar_x_plot = torch.linspace(xc.max(), x_range[1], 50).to(batches[0].xc)[

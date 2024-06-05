@@ -1,9 +1,9 @@
 generators:
   train:
-    _target_: tnp.data.sawtooth.SawtoothGenerator
+    _target_: tnp.data.squarewave.SquareWaveGenerator
     dim: ${params.dim_x}
-    min_freq: 2
-    max_freq: 4
+    min_freq: 1
+    max_freq: 3
     noise_std: 0.1
     min_nc: 10
     max_nc: 32
@@ -14,10 +14,10 @@ generators:
     samples_per_epoch: 16000
     batch_size: 16
   val:
-    _target_: tnp.data.sawtooth.SawtoothGenerator
+    _target_: tnp.data.squarewave.SquareWaveGenerator
     dim: ${params.dim_x}
-    min_freq: 2
-    max_freq: 4
+    min_freq: 1
+    max_freq: 3
     noise_std: 0.1
     min_nc: 10
     max_nc: 32
@@ -29,10 +29,10 @@ generators:
     batch_size: 16
     deterministic: True
   test:
-    _target_: tnp.data.sawtooth.SawtoothGenerator
+    _target_: tnp.data.squarewave.SquareWaveGenerator
     dim: ${params.dim_x}
-    min_freq: 2
-    max_freq: 4
+    min_freq: 1
+    max_freq: 3
     noise_std: 0.1
     min_nc: 10
     max_nc: 32
@@ -56,8 +56,8 @@ misc:
   num_plots: 10
   subplots: False
   savefig: True
-  logging: True
+  logging: False
   lightning_eval: True
   num_loglik_samples: 100
-  split_batch: False
+  split_batch: True
   subsample_test_targets: False

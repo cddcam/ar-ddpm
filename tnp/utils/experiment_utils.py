@@ -250,7 +250,7 @@ def discrete_denoising_sampling(
     # If we subsample the targets, sample one in every 2**t, where t is the diffusion time
     # (i.e. very few in the highest layers, and all at t=0)
     if subsample_targets:
-        sorted, _ = torch.sort(batch.xt, dim=1)
+        sorted, idx = torch.sort(batch.xt, dim=1)
         current_xt = sorted[:, ::2**len(scheduler)]
     else:
         current_xt = batch.xt
@@ -355,8 +355,9 @@ def discrete_denoising_loglik(
             # where t is the diffusion time (i.e. very few in the highest 
             # layers, and all at t=0)
             if subsample_targets:
-                sorted, _ = torch.sort(xt, dim=1)
+                sorted, idx = torch.sort(xt, dim=1)
                 current_xt = sorted[:, ::2**len(scheduler)]
+                yt = torch.gather(yt, 1, idx)
             else:
                 current_xt = xt
 
@@ -427,8 +428,9 @@ def discrete_denoising_loglik(
         # where t is the diffusion time (i.e. very few in the highest 
         # layers, and all at t=0)
         if subsample_targets:
-            sorted, _ = torch.sort(xt, dim=1)
+            sorted, idx = torch.sort(xt, dim=1)
             current_xt = sorted[:, ::2**len(scheduler)]
+            yt = torch.gather(yt, 1, idx)
         else:
             current_xt = xt
 
@@ -448,7 +450,7 @@ def discrete_denoising_loglik(
             # Context becomes unnoised context + previous noised up targets 
             # (from noise level above, hence we append tt + 1)
             yc_t = torch.cat([yc, noised_samples], dim=1)
-            xc_t = torch.cat([xc, xt], dim=1)
+            xc_t = torch.cat([xc, current_xt], dim=1)
             tc_t = torch.cat([tc, tt], dim=1)
 
             # If we subsample the targets, sample one in every 2**t
@@ -470,7 +472,7 @@ def discrete_denoising_loglik(
         else:
             loglik_joint = pred_dist.log_prob(yt[..., 0])  
             loglik_joint = loglik_joint.reshape(-1, num_samples)
-            loglik_joint = (torch.logsumexp(loglik_joint, dim=1) - np.log(float(num_samples))) / (yt[0, ..., 0].numel()*batch.xc.shape[0])
+            loglik_joint = (torch.logsumexp(loglik_joint, dim=1) - np.log(float(num_samples))) / (yt[0, ..., 0].numel())
             loglik_joint = loglik_joint.mean()
 
             std = torch.diagonal(pred_dist.covariance_matrix, dim1=-2, dim2=-1).sqrt()
@@ -478,7 +480,7 @@ def discrete_denoising_loglik(
             loglik = loglik.sum(dim=list(range(1, len(yt[..., 0].shape))))     
 
         loglik = loglik.reshape(-1, num_samples)
-        loglik = (torch.logsumexp(loglik, dim=1) - np.log(float(num_samples))) / (yt[0, ..., 0].numel()*batch.xc.shape[0])
+        loglik = (torch.logsumexp(loglik, dim=1) - np.log(float(num_samples))) / (yt[0, ..., 0].numel())
         loglik = loglik.mean()
 
         return loglik, loglik_joint

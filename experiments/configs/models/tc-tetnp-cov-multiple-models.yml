@@ -4,11 +4,11 @@ model:
   neural_process: ${neural_process}
   time_embedder: ${time_embedder}
   num_timesteps: ${scheduler.num_train_timesteps} 
-  single_model: True
+  single_model: False
 
 neural_process:
-  _target_: tnp.models.tnp.TNP
-  encoder: ${tnpd_encoder}
+  _target_: tnp.models.tetnp.TETNP
+  encoder: ${tetnpd_encoder}
   decoder: ${tnpd_decoder}
   likelihood: ${likelihood}
 
@@ -19,27 +19,45 @@ time_embedder:
   time_scale: 1000.
   num_timesteps: ${scheduler.num_train_timesteps}
   
-tnpd_encoder:
-  _target_: tnp.models.tnp.TNPEncoder
+tetnpd_encoder:
+  _target_: tnp.models.tetnp.TETNPEncoder
   transformer_encoder: ${transformer_encoder}
-  xy_encoder: ${xy_encoder}
+  y_encoder: ${y_encoder}
 
 transformer_encoder:
-  _target_: tnp.networks.transformer.TNPTransformerEncoder
+  _target_: tnp.networks.tetransformer.TETNPTransformerEncoder
   mhca_layer: ${mhca_layer}
   num_layers: ${params.num_layers}
 
 mhca_layer:
-  _target_: tnp.networks.attention_layers.MultiHeadCrossAttentionLayer
+  _target_: tnp.networks.teattention_layers.MultiHeadCrossTEAttentionLayer
   embed_dim: ${params.embed_dim}
   num_heads: ${params.num_heads}
   head_dim: ${params.head_dim}
+  kernel: ${mhca_kernel}
   feedforward_dim: ${params.embed_dim}
   norm_first: ${params.norm_first}
+  post_kernel: ${params.post_kernel}
+  # phi_t: ${mhca_phi_t}
+  qk_dim: ${params.qk_dim}
 
-xy_encoder:
+mhca_kernel:
+  _target_: tnp.networks.kernels.MLPKernel
+  in_dim: ${eval:'${params.qk_dim} + ${params.dim_x} + ${params.fourier_dim}*4'}
+  out_dim: ${params.num_heads}
+  num_layers: 2
+  width: ${params.embed_dim}
+
+# mhca_phi_t:
+#   _target_: tnp.networks.mlp.MLP
+#   in_dim: ${params.num_heads}
+#   out_dim: ${params.dim_x}
+#   num_layers: 2
+#   width: ${params.embed_dim}
+
+y_encoder:
   _target_: tnp.networks.mlp.MLP
-  in_dim: ${eval:'1 + ${params.dim_y} + ${params.dim_x} + ${params.fourier_dim}*4'}
+  in_dim: ${eval:'1 + ${params.dim_y}'}
   out_dim: ${params.embed_dim}
   num_layers: 2
   width: ${params.embed_dim}
@@ -51,12 +69,15 @@ tnpd_decoder:
 z_decoder:
   _target_: tnp.networks.mlp.MLP
   in_dim: ${params.embed_dim}
-  out_dim: ${eval:'2 * ${params.dim_y}'}
+  out_dim: ${eval:'${params.dim_y} + ${likelihood.covariance_feature_dim}'}
   num_layers: 2
   width: ${params.embed_dim}
 
 likelihood:
-  _target_: tnp.likelihoods.gaussian.HeteroscedasticNormalLikelihood
+  _target_: tnp.likelihoods.gaussian.InnerprodGaussianLikelihood
+  covariance_feature_dim: 512
+  noise_type: homo
+  noise_params_dim: ${eval:'${scheduler.num_train_timesteps} + 1'}
 
 optimiser:
   _target_: torch.optim.AdamW
@@ -69,11 +90,13 @@ params:
   num_heads: 8
   head_dim: 16
   norm_first: True
+  post_kernel: True
   num_layers: 5
+  qk_dim: ${params.num_heads}
   fourier_dim: 32
 
 misc:
-  name: TNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-TS${scheduler.num_train_timesteps}-beta${scheduler.beta_start}
+  name: TETNP-Cov-MModels-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-TS${scheduler.num_train_timesteps}-beta${scheduler.beta_start}
   resume_from_checkpoint: null
   plot_ar_mode: False
   gradient_clip_val: 0.5
