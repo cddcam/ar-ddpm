@@ -961,6 +961,73 @@ def ar_predict(
     return samples, sample_logprobs
 
 
+def ar_loglik(
+    model: nn.Module, 
+    batch: Batch, 
+    scheduler: BaseScheduler = None,
+    num_samples: int = 100,
+    split_batch: bool = False,
+    subsample_targets: bool = False,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Loglikelihood for TNP model with AR prediction
+
+    Args:
+        model (nn.Module): NeuralProcess model.
+        num_samples (int): Number of predictive samples to generate and use to estimate likelihood.
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]: estimated log-probabilities 
+    """
+
+    xc = batch.xc
+    yc = batch.yc
+    xt = batch.xt
+    yt = batch.yt
+
+    logprobs_list: List[torch.Tensor] = []
+
+    # Expand tensors for efficient computation.
+    xc_ = einops.repeat(xc, "m n d -> s m n d", s=num_samples)
+    yc_ = einops.repeat(yc, "m n d -> s m n d", s=num_samples)
+    xt_ = einops.repeat(xt, "m n d -> s m n d", s=num_samples)
+    yt_ = einops.repeat(yt, "m n d -> s m n d", s=num_samples)
+    xc_, _ = compress_batch_dimensions(xc_, other_dims=2)
+    yc_, _ = compress_batch_dimensions(yc_, other_dims=2)
+    xt_, _ = compress_batch_dimensions(xt_, other_dims=2)
+    yt_, _ = compress_batch_dimensions(yt_, other_dims=2)
+
+    # AR mode for loop.
+    for i in range(xt_.shape[1]):
+        with torch.no_grad():
+            # Compute conditional distribution, sample and evaluate log probabilities.
+            tt = torch.zeros(xt_[:, i: i + 1].shape[0], xt_[:, i: i + 1].shape[1], device=xc_.device)
+            tc = torch.zeros(xc_.shape[0], xc_.shape[1], device=xc_.device)
+
+            pred_dist = model(xc_, yc_, xt_[:, i : i + 1], tc, tt)
+            pred = pred_dist.rsample()
+            pred_logprob = pred_dist.log_prob(yt_[:, i : i + 1])
+
+            # Store samples and probabilities.
+            pred = pred.detach()
+            pred_logprob = pred_logprob.detach()
+            logprobs_list.append(pred_logprob)
+
+            # Update context.
+            xc_ = torch.cat([xc_, xt_[:, i : i + 1]], dim=1)
+            yc_ = torch.cat([yc_, pred], dim=1)
+
+    # Compute log probability of sample.
+    logprobs = torch.cat(logprobs_list, dim=1)
+
+    logprobs = einops.rearrange(
+        logprobs, "(s m) n d -> s m n d", s=num_samples
+    )
+    loglik = logprobs.sum(dim=(-2, -1))
+    loglik = (torch.logsumexp(loglik, dim=0) - np.log(float(num_samples))) / yt[0, ..., 0].numel()
+
+    return loglik.mean(), None
+
+
 def updated_ar_predict(
     model: nn.Module,
     xc: torch.Tensor,

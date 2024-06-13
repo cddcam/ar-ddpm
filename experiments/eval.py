@@ -7,7 +7,8 @@ from tnp.utils.experiment_utils import (initialize_evaluation,
                                         val_epoch,
                                         test_epoch,
                                         discrete_denoising_sampling,
-                                        discrete_denoising_loglik)
+                                        discrete_denoising_loglik, 
+                                        ar_loglik)
 from tnp.utils.lightning_utils import LitWrapper
 
 
@@ -57,14 +58,24 @@ def main():
     wandb.run.summary["num_params"] = num_params
 
     if experiment.misc.lightning_eval:
-        lit_model = LitWrapper(
-            model=model, 
-            scheduler=scheduler,
-            loglik_fn=discrete_denoising_loglik,
-            num_samples=experiment.misc.num_loglik_samples,
-            split_batch=experiment.misc.split_batch,
-            subsample_test_targets=experiment.misc.subsample_test_targets,
-            )
+        if experiment.misc.ar_prediction: 
+            lit_model = LitWrapper(
+                model=model, 
+                scheduler=scheduler,
+                loglik_fn=ar_loglik,
+                num_samples=experiment.misc.num_loglik_samples,
+                split_batch=experiment.misc.split_batch,
+                subsample_test_targets=experiment.misc.subsample_test_targets,
+                )
+        else:
+            lit_model = LitWrapper(
+                model=model, 
+                scheduler=scheduler,
+                loglik_fn=discrete_denoising_loglik,
+                num_samples=experiment.misc.num_loglik_samples,
+                split_batch=experiment.misc.split_batch,
+                subsample_test_targets=experiment.misc.subsample_test_targets,
+                )
         trainer = pl.Trainer(devices=1)
         trainer.test(model=lit_model, dataloaders=gen_test)
         test_result = {
@@ -89,8 +100,9 @@ def main():
             test_result["std_gt_loglik_joint"] = gt_loglik_joint.std() / (len(gt_loglik_joint) ** 0.5)
 
         batches = test_result["batch"]
-        print("Loglik joint", test_result["mean_loglik_joint"])
-        print("GT Loglik joint", test_result["mean_gt_loglik_joint"])
+        if "mean_loglik_joint" in test_result:
+            print("Loglik joint", test_result["mean_loglik_joint"])
+            print("GT Loglik joint", test_result["mean_gt_loglik_joint"])
 
     else:
         test_result, batches = test_epoch(model=model, 

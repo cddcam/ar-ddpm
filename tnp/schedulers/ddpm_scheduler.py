@@ -104,6 +104,9 @@ class DDPMScheduler(BaseScheduler):
             self.betas = torch.sigmoid(betas) * (beta_end - beta_start) + beta_start
         elif beta_schedule == "constant":
             self.betas = torch.tensor([beta_start]*max(num_train_timesteps, 1))
+        elif beta_schedule == "exponential":
+            ts = max(num_train_timesteps, 1)
+            self.betas = [beta_start ** (k / ts) for k in reversed(range(ts + 1))]
         else:
             raise NotImplementedError(f"{beta_schedule} does is not implemented for {self.__class__}")
 
