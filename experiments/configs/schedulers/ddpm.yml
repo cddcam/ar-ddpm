@@ -1,7 +1,8 @@
 scheduler:
   _target_: tnp.schedulers.ddpm_scheduler.DDPMScheduler
-  num_train_timesteps: 3
-  beta_start: 0.3
+  num_train_timesteps: 2
+  beta_start: 0.4
+  beta_end: 0.1
   beta_schedule: constant
   variance_type: learned
   prediction_type: mean

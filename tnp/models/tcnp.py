@@ -34,7 +34,12 @@ class TimeConditionedNP(nn.Module):
                 self.time_embedders.append(hydra.utils.instantiate(time_embedder))
 
     def forward(
-        self, xc: torch.Tensor, yc: torch.Tensor, xt: torch.Tensor, tc: torch.Tensor, tt: torch.Tensor
+        self, 
+        xc: torch.Tensor, 
+        yc: torch.Tensor, 
+        xt: torch.Tensor, 
+        tc: torch.Tensor, 
+        tt: torch.Tensor,
     ):
         if not self.single_model:
             # If one model per diffusion timestep, get the model corresponding

@@ -30,9 +30,9 @@ def plot(
     figsize: Tuple[float, float] = (8.0, 6.0),
     x_range: Union[
         Tuple[float, float], Tuple[Tuple[float, float], Tuple[float, float]]
-    ] = (-5.0, 5.0),
+    ] = (-3.0, 3.0),
     y_lim: Tuple[float, float] = (-3.0, 3.0),
-    points_per_dim: int = 256,
+    points_per_dim: int = 1000,
     plot_ar_mode: bool = False,
     num_ar_samples: int = 20,
     plot_target: bool = True,
@@ -234,7 +234,7 @@ def plot(
                 if batch.params[0] == "squarewave":
                     _, freq, offset = batch.params
                     f = torch.where(
-                        torch.floor(x_plot[0, :, 0] * freq[0, ...] - offset[0, ...]) % 2 == 0, 
+                        torch.floor(x_plot[0, :, 0].cpu() * freq[0, ...].cpu() - offset[0, ...].cpu()) % 2 == 0, 
                         1.0, 0.0)
                     plt.plot(
                         x_plot[0, :, 0].cpu(), 
@@ -248,7 +248,7 @@ def plot(
                 elif batch.params[0] == "sawtooth":
                     _, freq, offset, direction = batch.params
                     f = (
-                        freq[0, ...] * (x_plot[0, :, 0] * direction[0, ...] - offset[0, ...])
+                        freq[0, ...].cpu() * (x_plot[0, :, 0].cpu() * direction[0, ...].cpu() - offset[0, ...].cpu())
                     ) % 1
                     plt.plot(
                         x_plot[0, :, 0].cpu(), 

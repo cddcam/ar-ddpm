@@ -56,7 +56,12 @@ class LitWrapper(pl.LightningModule):
     ) -> torch.Tensor:
         _ = batch_idx
         if self.scheduler is not None:
-            loss = self.loss_fn(model=self.model, batch=batch, scheduler=self.scheduler, subsample_targets=self.subsample_targets)
+            loss = self.loss_fn(
+                model=self.model, 
+                batch=batch, 
+                scheduler=self.scheduler, 
+                subsample_targets=self.subsample_targets,
+                )
         else:
             loss = self.loss_fn(self.model, batch)
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)

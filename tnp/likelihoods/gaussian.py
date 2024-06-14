@@ -75,7 +75,7 @@ class InnerprodGaussianLikelihood(Likelihood):
     def _mean_and_cov(
             self, 
             x: torch.Tensor, 
-            t: Optional[int] = None
+            t: Optional[int] = None,
         ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor] :
         """
         Computes mean and covariance of linear Gaussian layer, as specified
@@ -134,7 +134,7 @@ class InnerprodGaussianLikelihood(Likelihood):
     def forward(
             self, 
             x: torch.Tensor, 
-            t: Optional[int] = None
+            t: Optional[int] = None,
         ) -> Union[td.MultivariateNormal, td.LowRankMultivariateNormal]:
         # Check tensor has three dimensions, and last dimension has size num_features
         assert (len(x.shape) == 3) and \

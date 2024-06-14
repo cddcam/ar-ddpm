@@ -2,7 +2,7 @@ generators:
   train:
     _target_: tnp.data.gp.RandomScaleGPGenerator
     dim: ${params.dim_x}
-    kernel_type: [eq, matern52]
+    kernel_type: [periodic]
     min_log10_lengthscale: -0.602
     max_log10_lengthscale: 0.602
     noise_std: 0.2
@@ -17,7 +17,7 @@ generators:
   val:
     _target_: tnp.data.gp.RandomScaleGPGenerator
     dim: ${params.dim_x}
-    kernel_type: [eq, matern52]
+    kernel_type: [periodic]
     min_log10_lengthscale: -0.602
     max_log10_lengthscale: 0.602
     noise_std: 0.2
@@ -33,7 +33,7 @@ generators:
   test:
     _target_: tnp.data.gp.RandomScaleGPGenerator
     dim: ${params.dim_x}
-    kernel_type: [eq, matern52]
+    kernel_type: [periodic]
     min_log10_lengthscale: -0.602
     max_log10_lengthscale: 0.602
     noise_std: 0.2
@@ -52,7 +52,7 @@ params:
   dim_y: 1
 
 misc:
-  project: synthetic-1d-rbf-matern
+  project: synthetic-1d-periodic
   eval_name: eval
   seed: 0
   only_plots: False
@@ -61,6 +61,6 @@ misc:
   savefig: True
   logging: True
   lightning_eval: True
-  num_loglik_samples: 100
+  num_loglik_samples: 1000
   split_batch: True
   subsample_test_targets: True

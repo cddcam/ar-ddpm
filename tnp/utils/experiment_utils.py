@@ -539,7 +539,12 @@ def train_epoch(
     losses = []
     for batch in epoch:
         optimiser.zero_grad()
-        loss = loss_fn(model=model, batch=batch, scheduler=scheduler, subsample_targets=subsample_targets)
+        loss = loss_fn(
+            model=model, 
+            batch=batch, 
+            scheduler=scheduler, 
+            subsample_targets=subsample_targets,
+            )
         loss.backward()
 
         if gradient_clip_val is not None:
