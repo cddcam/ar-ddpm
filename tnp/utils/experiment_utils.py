@@ -984,6 +984,9 @@ def ar_loglik(
     xt = batch.xt
     yt = batch.yt
 
+    if not subsample_targets:
+        num_samples = 1
+
     logprobs_list: List[torch.Tensor] = []
 
     # Expand tensors for efficient computation.
@@ -1004,11 +1007,14 @@ def ar_loglik(
             tc = torch.zeros(xc_.shape[0], xc_.shape[1], device=xc_.device)
 
             pred_dist = model(xc_, yc_, xt_[:, i : i + 1], tc, tt)
-            pred = pred_dist.rsample()
             pred_logprob = pred_dist.log_prob(yt_[:, i : i + 1])
 
             # Store samples and probabilities.
-            pred = pred.detach()
+            if subsample_targets: 
+                pred = pred_dist.rsample()
+                pred = pred.detach()
+            else:
+                pred = yt_[:, i : i + 1]
             pred_logprob = pred_logprob.detach()
             logprobs_list.append(pred_logprob)
 
