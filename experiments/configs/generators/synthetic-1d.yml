@@ -63,4 +63,5 @@ misc:
   lightning_eval: True
   num_loglik_samples: 1000
   split_batch: True
+  ar_prediction: False
   subsample_test_targets: True
