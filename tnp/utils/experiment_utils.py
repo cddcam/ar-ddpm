@@ -143,7 +143,7 @@ def discrete_denoising_loss_fn(
     pred_dist = model(xc, yc, batch.xt, tc, tt)
     # Get true posterior when conditioning on true data
     int_loc, int_var = scheduler.get_mu_var(batch.yt, tt, noised_targets, mask_targets)
-    print(int_loc.shape)
+
     if isinstance(pred_dist, td.Normal):
         # If covariance is diagonal
         kl_div = pred_dist.log_prob(int_loc).sum() / int_loc.numel()
@@ -1015,7 +1015,7 @@ def ar_loglik(
             if isinstance(pred_dist, td.Normal):
                 pred_logprob = pred_dist.log_prob(yt_[:, i : i + 1])
             else:
-                pred_logprob = pred_dist.log_prob(yt_[:, i : i + 1, 0])[:, None, None]
+                raise ValueError("AR only with diagonal covariance")
 
             # Store samples and probabilities.
             if subsample_targets: 
