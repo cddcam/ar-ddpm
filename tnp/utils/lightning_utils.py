@@ -4,6 +4,7 @@ from typing import Any, Callable, List, Optional
 import lightning.pytorch as pl
 import torch
 from torch import nn
+import warnings
 
 from ..data.base import Batch
 from .experiment_utils import ModelCheckpointer, np_loss_fn, np_pred_fn, discrete_denoising_loglik
@@ -120,6 +121,18 @@ class LitWrapper(pl.LightningModule):
             result["gt_loglik_joint"] = gt_loglik_joint.cpu()
 
         self.test_outputs.append(result)
+
+    def on_after_backward(self) -> None:
+        valid_gradients = True
+        for name, param in self.named_parameters():
+            if param.grad is not None:
+                valid_gradients = not (torch.isnan(param.grad).any() or torch.isinf(param.grad).any())
+                if not valid_gradients:
+                    break
+
+        if not valid_gradients:
+            warnings.warn(f'detected inf or nan values in gradients. not updating model parameters')
+            self.zero_grad()
 
     def on_train_epoch_end(self) -> None:
         train_losses = torch.stack(self.train_losses)
