@@ -20,6 +20,19 @@ class DetPolynomialGeneratorBase(SyntheticGenerator):
         self,
         x: torch.Tensor,
     ) -> Tuple[torch.Tensor, None]:
+
+        # Compute the polynomial
+        result = self.get_poly(x)
+        
+        # Add noise
+        y = torch.normal(result, self.noise_std)
+
+        return y, None, ("deterministic_polynomials", self.coefficients, self.noise_std)
+    
+    def get_poly(
+        self,
+        x: torch.Tensor,
+    ) -> Tuple[torch.Tensor, None]:
         # Compute the mean based on the poylnomial coefficients
         # Convert coefficients to a tensor
         coefficients_tensor = torch.tensor(self.coefficients, dtype=x.dtype, device=x.device).view(1, 1, 1, -1)
@@ -30,9 +43,7 @@ class DetPolynomialGeneratorBase(SyntheticGenerator):
         # Compute the polynomial
         result = (x_powers * coefficients_tensor).sum(dim=-1)
         
-        y = torch.normal(result, self.noise_std)
-
-        return y, None, ("deterministic_polynomials", self.coefficients, self.noise_std)
+        return result
 
 
 class DetPolynomialGenerator(DetPolynomialGeneratorBase, SyntheticGeneratorUniformInput):

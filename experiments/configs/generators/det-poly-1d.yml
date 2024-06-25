@@ -35,11 +35,11 @@ generators:
       - ${generators.poly3}
     mixture_probs: [0.25, 0.5, 0.25] 
     dim: ${params.dim_x}
-    min_nc: ${generators.common_settings.min_nc}
-    max_nc: ${generators.common_settings.max_nc}
+    min_nc: 0
+    max_nc: 5
     min_nt: ${generators.common_settings.min_nt}
     max_nt: ${generators.common_settings.max_nt}
-    samples_per_epoch: 4096
+    samples_per_epoch: 100
     batch_size: 16
   poly1:
     _target_: tnp.data.det_poly.DetPolynomialGenerator
