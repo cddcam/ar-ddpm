@@ -21,6 +21,7 @@ mhca_layer:
   head_dim: ${params.head_dim}
   feedforward_dim: ${params.embed_dim}
   norm_first: ${params.norm_first}
+  # sub_LN: False
 
 xy_encoder:
   _target_: tnp.networks.mlp.MLP
@@ -49,7 +50,7 @@ optimiser:
   lr: 5.0e-4
 
 params:
-  epochs: 500
+  epochs: 250
   embed_dim: 128
   num_heads: 8
   head_dim: 16
@@ -58,7 +59,7 @@ params:
 
 
 misc:
-  name: TNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}
+  name: TNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-subLN${mhca_layer.sub_LN}
   resume_from_checkpoint: null
   gradient_clip_val: 0.5
   plot_interval: 10

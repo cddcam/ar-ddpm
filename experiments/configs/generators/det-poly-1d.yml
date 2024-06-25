@@ -1,0 +1,107 @@
+generators:
+  train:
+    _target_: tnp.data.det_poly.DetPolynomialGeneratorMixture
+    generators:
+      - ${generators.poly1}
+      - ${generators.poly2}
+      - ${generators.poly3}
+    mixture_probs: [0.25, 0.5, 0.25] 
+    dim: ${params.dim_x}
+    min_nc: ${generators.common_settings.min_nc}
+    max_nc: ${generators.common_settings.max_nc}
+    min_nt: ${generators.common_settings.min_nt}
+    max_nt: ${generators.common_settings.max_nt}
+    samples_per_epoch: 16000
+    batch_size: 16
+  val:
+    _target_: tnp.data.det_poly.DetPolynomialGeneratorMixture
+    generators:
+      - ${generators.poly1}
+      - ${generators.poly2}
+      - ${generators.poly3}
+    mixture_probs: [0.25, 0.5, 0.25] 
+    dim: ${params.dim_x}
+    min_nc: ${generators.common_settings.min_nc}
+    max_nc: ${generators.common_settings.max_nc}
+    min_nt: ${generators.common_settings.min_nt}
+    max_nt: ${generators.common_settings.max_nt}
+    samples_per_epoch: 4096
+    batch_size: 16
+  test:
+    _target_: tnp.data.det_poly.DetPolynomialGeneratorMixture
+    generators:
+      - ${generators.poly1}
+      - ${generators.poly2}
+      - ${generators.poly3}
+    mixture_probs: [0.25, 0.5, 0.25] 
+    dim: ${params.dim_x}
+    min_nc: ${generators.common_settings.min_nc}
+    max_nc: ${generators.common_settings.max_nc}
+    min_nt: ${generators.common_settings.min_nt}
+    max_nt: ${generators.common_settings.max_nt}
+    samples_per_epoch: 4096
+    batch_size: 16
+  poly1:
+    _target_: tnp.data.det_poly.DetPolynomialGenerator
+    dim: ${params.dim_x}
+    coefficients: [1, 0, 1]
+    noise_std: 1.0
+    min_nc: ${generators.common_settings.min_nc}
+    max_nc: ${generators.common_settings.max_nc}
+    min_nt: ${generators.common_settings.min_nt}
+    max_nt: ${generators.common_settings.max_nt}
+    context_range: ${generators.common_settings.context_range}
+    target_range: ${generators.common_settings.target_range}
+    samples_per_epoch: 16000
+    batch_size: 16
+  poly2:
+    _target_: tnp.data.det_poly.DetPolynomialGenerator
+    dim: ${params.dim_x}
+    coefficients: [0, 1]
+    noise_std: 1.0
+    min_nc: ${generators.common_settings.min_nc}
+    max_nc: ${generators.common_settings.max_nc}
+    min_nt: ${generators.common_settings.min_nt}
+    max_nt: ${generators.common_settings.max_nt}
+    context_range: ${generators.common_settings.context_range}
+    target_range: ${generators.common_settings.target_range}
+    samples_per_epoch: 16000
+    batch_size: 16
+  poly3:
+    _target_: tnp.data.det_poly.DetPolynomialGenerator
+    dim: ${params.dim_x}
+    coefficients: [0, -1]
+    noise_std: 1.0
+    min_nc: ${generators.common_settings.min_nc}
+    max_nc: ${generators.common_settings.max_nc}
+    min_nt: ${generators.common_settings.min_nt}
+    max_nt: ${generators.common_settings.max_nt}
+    context_range: ${generators.common_settings.context_range}
+    target_range: ${generators.common_settings.target_range}
+    samples_per_epoch: 16000
+    batch_size: 16
+  common_settings:
+    min_nc: 0
+    max_nc: 32
+    min_nt: 128
+    max_nt: 128
+    context_range: [[0.0, 7.0]]
+    target_range: [[0.0, 7.0]]
+
+params:
+  dim_x: 1
+  dim_y: 1
+
+misc:
+  project: det-poly-1d
+  eval_name: eval
+  seed: 0
+  only_plots: False
+  num_plots: 10
+  subplots: False
+  savefig: True
+  logging: True
+  lightning_eval: True
+  num_loglik_samples: 100
+  split_batch: True
+  subsample_test_targets: False

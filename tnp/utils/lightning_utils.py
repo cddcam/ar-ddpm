@@ -5,6 +5,7 @@ import lightning.pytorch as pl
 import warnings
 import torch
 from torch import nn
+import warnings
 
 from ..data.base import Batch
 from .experiment_utils import ModelCheckpointer, np_loss_fn, np_pred_fn, discrete_denoising_loglik
@@ -58,7 +59,12 @@ class LitWrapper(pl.LightningModule):
         _ = batch_idx
 
         if self.scheduler is not None:
-            loss = self.loss_fn(model=self.model, batch=batch, scheduler=self.scheduler, subsample_targets=self.subsample_targets)
+            loss = self.loss_fn(
+                model=self.model, 
+                batch=batch, 
+                scheduler=self.scheduler, 
+                subsample_targets=self.subsample_targets,
+                )
         else:
             loss = self.loss_fn(self.model, batch)
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -117,6 +123,18 @@ class LitWrapper(pl.LightningModule):
             result["gt_loglik_joint"] = gt_loglik_joint.cpu()
 
         self.test_outputs.append(result)
+
+    def on_after_backward(self) -> None:
+        valid_gradients = True
+        for name, param in self.named_parameters():
+            if param.grad is not None:
+                valid_gradients = not (torch.isnan(param.grad).any() or torch.isinf(param.grad).any())
+                if not valid_gradients:
+                    break
+
+        if not valid_gradients:
+            warnings.warn(f'detected inf or nan values in gradients. not updating model parameters')
+            self.zero_grad()
 
     def on_train_epoch_end(self) -> None:
         train_losses = torch.stack(self.train_losses)

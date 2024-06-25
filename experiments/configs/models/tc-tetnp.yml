@@ -93,7 +93,7 @@ params:
   fourier_dim: 32
 
 misc:
-  name: TETNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-TS${scheduler.num_train_timesteps}-beta${scheduler.beta_start}
+  name: TETNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-TS${scheduler.num_train_timesteps}-beta-${scheduler.beta_schedule}-${scheduler.beta_start}
   resume_from_checkpoint: null
   plot_ar_mode: False
   gradient_clip_val: 0.5

@@ -25,8 +25,9 @@ class SawtoothGeneratorBase(SyntheticGenerator):
         freq = self.sample_freq()
 
         # Sample a direction.
-        direction = torch.randn((self.batch_size, x.shape[-1]))
-        direction = direction / (direction.abs())
+        random_values = torch.bernoulli(torch.full((self.batch_size, x.shape[-1]), 0.5))
+        # Map 0s to -1 and 1s remain 1
+        direction = random_values * 2 - 1
 
         # Sample a uniformly distributed (conditional on frequency) offset.
         sample = torch.rand((self.batch_size,))

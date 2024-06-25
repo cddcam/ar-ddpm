@@ -64,13 +64,13 @@ optimiser:
   lr: 5.0e-4
 
 params:
-  epochs: 200
+  epochs: 100
   embed_dim: 128
   num_heads: 8
   head_dim: 16
   norm_first: True
   num_layers: 5
-  fourier_dim: 32
+  fourier_dim: 2
 
 misc:
   name: TNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-TS${scheduler.num_train_timesteps}-beta${scheduler.beta_start}

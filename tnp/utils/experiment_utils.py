@@ -274,7 +274,7 @@ def discrete_denoising_sampling(
     # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
     for t in range(len(scheduler) - 1, -1, -1):
         # Context becomes unnoised context + previous noised up targets 
-        # (from noise level above, hence we append tt + 1)
+        # (from noise level above, hence we append tt + 1 (index tt))
         yc_t = torch.cat([batch.yc, noised_samples], dim=1)
         xc_t = torch.cat([batch.xc, current_xt], dim=1)
         tc_t = torch.cat([tc, tt], dim=1)
@@ -375,7 +375,7 @@ def discrete_denoising_loglik(
             # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
             for t in range(len(scheduler) - 1, -1, -1):
                 # Context becomes unnoised context + previous noised up targets 
-                # (from noise level above, hence we append tt + 1)
+                # (from noise level above, hence we append tt + 1 (index tt))
                 yc_t = torch.cat([yc, noised_samples], dim=1)
                 xc_t = torch.cat([xc, current_xt], dim=1)
                 tc_t = torch.cat([tc, tt], dim=1)
@@ -448,7 +448,7 @@ def discrete_denoising_loglik(
         # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
         for t in range(len(scheduler) - 1, -1, -1):
             # Context becomes unnoised context + previous noised up targets 
-            # (from noise level above, hence we append tt + 1)
+            # (from noise level above, hence we append tt + 1 (index tt))
             yc_t = torch.cat([yc, noised_samples], dim=1)
             xc_t = torch.cat([xc, current_xt], dim=1)
             tc_t = torch.cat([tc, tt], dim=1)
@@ -539,7 +539,12 @@ def train_epoch(
     losses = []
     for batch in epoch:
         optimiser.zero_grad()
-        loss = loss_fn(model=model, batch=batch, scheduler=scheduler, subsample_targets=subsample_targets)
+        loss = loss_fn(
+            model=model, 
+            batch=batch, 
+            scheduler=scheduler, 
+            subsample_targets=subsample_targets,
+            )
         loss.backward()
 
         if gradient_clip_val is not None:
@@ -692,6 +697,7 @@ def create_default_config() -> DictConfig:
                 "_target_": "tnp.utils.experiment_utils.discrete_denoising_loglik",
                 "_partial_": True,
             },
+            "subsample_targets": False,
         }
     }
     return OmegaConf.create(default_config)
@@ -1007,7 +1013,10 @@ def ar_loglik(
             tc = torch.zeros(xc_.shape[0], xc_.shape[1], device=xc_.device)
 
             pred_dist = model(xc_, yc_, xt_[:, i : i + 1], tc, tt)
-            pred_logprob = pred_dist.log_prob(yt_[:, i : i + 1])
+            if isinstance(pred_dist, td.Normal):
+                pred_logprob = pred_dist.log_prob(yt_[:, i : i + 1])
+            else:
+                raise ValueError("AR only with diagonal covariance")
 
             # Store samples and probabilities.
             if subsample_targets: 
