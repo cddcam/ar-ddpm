@@ -49,12 +49,19 @@ class TimeConditionedNP(nn.Module):
         # tc will always be 0 since we do not noise the context points up
         time_embedding_tc = time_embedder(tc)
         time_embedding_tt = time_embedder(tt)
-
+        
+        if time_embedder.concatenate:
         # Concatenate time embedding to context and target embeddings
-        xc = torch.cat([xc, time_embedding_tc], dim=-1)
-        xt = torch.cat([xt, time_embedding_tt], dim=-1)
+            xc = torch.cat([xc, time_embedding_tc], dim=-1)
+            xt = torch.cat([xt, time_embedding_tt], dim=-1)
+            pos_enc_c = None
+            pos_enc_t = None
+        else:
+            pos_enc_c = time_embedding_tc
+            pos_enc_t = time_embedding_tt
 
         return neural_process.likelihood(
             neural_process.decoder(
-                neural_process.encoder(xc, yc, xt), xt), int(tt[0, 0].item())
+                neural_process.encoder(xc=xc, yc=yc, xt=xt, pos_enc_c=pos_enc_c, pos_enc_t=pos_enc_t), xt), 
+                int(tt[0, 0].item())
                 )

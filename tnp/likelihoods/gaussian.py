@@ -36,9 +36,10 @@ class HeteroscedasticNormalLikelihood(Likelihood):
         assert x.shape[-1] % 2 == 0
 
         loc, log_var = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
+        log_var = torch.clamp(log_var, min=-5, max=10)
         scale = (
             nn.functional.softplus(log_var) ** 0.5  # pylint: disable=not-callable
-            + self.min_noise
+            # + self.min_noise
         )
         return td.Normal(loc, scale)
 
@@ -110,7 +111,8 @@ class InnerprodGaussianLikelihood(Likelihood):
             # Basis functions are the remaining dimensions
             z = x[:, :, 1:] / C**0.5
             
-            noise = torch.nn.Softplus()(self.noise_unconstrained[t])
+            log_var = torch.clamp(self.noise_unconstrained[t], min=-5, max=10)
+            noise = torch.nn.Softplus()(log_var)
             noise = noise[None, None].repeat(B, T)
             noise = torch.diag_embed(noise)
             
@@ -141,39 +143,45 @@ class InnerprodGaussianLikelihood(Likelihood):
                (x.shape[2] == self.num_features)
         
         B, T, C = x.shape
-        
+
+        mean, f_cov, y_cov = self._mean_and_cov(x, t)
+        cov = f_cov if self.noise_type == 'noiseless' else y_cov
+            
+        dist = td.MultivariateNormal(loc=mean, covariance_matrix=cov)
+        return dist
         # If num datapoints smaller than num embedding, return full-rank
-        if T - 1 <= self.num_embedding:
+        # if T - 1 <= self.num_embedding:
             
-            mean, f_cov, y_cov = self._mean_and_cov(x, t)
-            cov = f_cov if self.noise_type == 'noiseless' else y_cov
+        #     mean, f_cov, y_cov = self._mean_and_cov(x, t)
+        #     cov = f_cov if self.noise_type == 'noiseless' else y_cov
             
-            dist = td.MultivariateNormal(loc=mean, covariance_matrix=cov)
-            return dist
+        #     dist = td.MultivariateNormal(loc=mean, covariance_matrix=cov)
+        #     return dist
           
-        # Otherwise, return low-rank 
-        else:  
-            # Split tensor into mean and embedding
-            mean = x[:, :, 0]
-            z = x[:, :, 1:-1] / C**0.5
+        # # Otherwise, return low-rank 
+        # else:  
+        #     # Split tensor into mean and embedding
+        #     mean = x[:, :, 0]
+        #     z = x[:, :, 1:-1] / C**0.5
             
-            jitter = torch.tensor(self.jitter).repeat(B, T).to(z.device)
+        #     jitter = torch.tensor(self.jitter).repeat(B, T).to(z.device)
 
-            if self.noise_type == 'noiseless':
-                noise = 0.0
+        #     if self.noise_type == 'noiseless':
+        #         noise = 0.0
                 
-            elif self.noise_type == "homo":
-                noise = torch.nn.Softplus()(self.noise_unconstrained[t])
-                noise = noise[None, None].repeat(B, T)
+        #     elif self.noise_type == "homo":
+        #         log_var = torch.clamp(self.noise_unconstrained[t], min=-5, max=10)
+        #         noise = torch.nn.Softplus()(log_var)
+        #         noise = noise[None, None].repeat(B, T)
 
-            else:
-                noise = torch.nn.Softplus()(x[:, :, -1])
+        #     else:
+        #         noise = torch.nn.Softplus()(x[:, :, -1])
                 
-            noise = noise + jitter
+        #     noise = noise + jitter
             
-            dist = td.LowRankMultivariateNormal(
-                loc=mean,
-                cov_factor=z,
-                cov_diag=noise
-            )
-            return dist
+        #     dist = td.LowRankMultivariateNormal(
+        #         loc=mean,
+        #         cov_factor=z,
+        #         cov_diag=noise
+        #     )
+        #     return dist

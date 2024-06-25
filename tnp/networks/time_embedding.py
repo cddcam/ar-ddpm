@@ -19,17 +19,18 @@ class FourierTimeEmbedder(nn.Module):
         self.max_period = max_period
         self.time_embed = nn.Sequential(
             nn.Linear(fourier_dim, time_embed_dim),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(time_embed_dim, time_embed_dim),
         )
         self.num_timesteps = num_timesteps
+        self.concatenate = True
 
     def forward(self, t):
         scaled_time = self.time_scale*t/max(self.num_timesteps, 1)
         embedded_time = self.fourier_embedding(scaled_time)
         return self.time_embed(embedded_time)
         
-    def fourier_embedding(self, timesteps: torch.Tensor):
+    def fourier_embedding(self, timesteps: torch.Tensor, is_context: bool=True):
         """Create sinusoidal timestep embeddings.
 
         Args:
@@ -52,3 +53,35 @@ class FourierTimeEmbedder(nn.Module):
         if self.fourier_dim % 2:
             embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
         return embedding
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(
+        self,
+        embed_dim: int, 
+        num_timesteps: int = 0,
+        shared: bool = True,
+    ):
+        super().__init__()
+        self.num_timesteps = num_timesteps
+        if shared: 
+            self.pos_embedding = nn.Parameter(
+                torch.empty(self.num_timesteps + 1, embed_dim).normal_(std=0.02)
+            )
+        else:
+            self.pos_embedding_context = nn.Parameter(
+                torch.empty(self.num_timesteps + 1, embed_dim).normal_(std=0.02)
+            )
+            self.pos_embedding_target = nn.Parameter(
+                torch.empty(self.num_timesteps + 1, embed_dim).normal_(std=0.02)
+            )
+        self.shared = shared
+        self.concatenate = False
+
+    def forward(self, t, is_context=True):
+        if self.shared:
+            return self.pos_embedding[t.long()]
+        else:
+            if is_context:
+                return self.pos_embedding_context[t.long()]
+            return self.pos_embedding_target[t.long()]

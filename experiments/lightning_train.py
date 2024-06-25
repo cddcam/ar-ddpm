@@ -1,5 +1,6 @@
 import lightning.pytorch as pl
 from plot import plot
+from plot_image import plot_image
 
 from tnp.utils.experiment_utils import initialize_experiment
 from tnp.utils.lightning_utils import LitWrapper
@@ -17,17 +18,28 @@ def main():
     scheduler = experiment.scheduler
 
     def plot_fn(model, batches, name, scheduler):
-        plot(
-            model=model,
-            batches=batches,
-            num_fig=min(5, len(batches)),
-            plot_ar_mode=experiment.misc.plot_ar_mode,
-            num_ar_samples=20,
-            name=name,
-            pred_fn=experiment.misc.pred_fn,
-            scheduler=scheduler,
-            subsample_targets=experiment.misc.subsample_targets,
-        )
+        if experiment.params.dim_x == 1:
+            plot(
+                model=model,
+                batches=batches,
+                num_fig=min(5, len(batches)),
+                plot_ar_mode=experiment.misc.plot_ar_mode,
+                num_ar_samples=20,
+                name=name,
+                pred_fn=experiment.misc.pred_fn,
+                scheduler=scheduler,
+                subsample_targets=experiment.misc.subsample_targets,
+            )
+        else:
+            plot_image(
+                model=model, 
+                batches=batches,
+                num_fig=min(5, len(batches)),
+                name=name,
+                pred_fn=experiment.misc.pred_fn,
+                scheduler=scheduler,
+                subsample_targets=experiment.misc.subsample_targets,
+            )
 
     lit_model = LitWrapper(
         model=model,

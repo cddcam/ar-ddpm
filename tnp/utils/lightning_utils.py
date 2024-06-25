@@ -2,6 +2,7 @@ import dataclasses
 from typing import Any, Callable, List, Optional
 
 import lightning.pytorch as pl
+import warnings
 import torch
 from torch import nn
 
@@ -55,6 +56,7 @@ class LitWrapper(pl.LightningModule):
         self, batch: Batch, batch_idx: int
     ) -> torch.Tensor:
         _ = batch_idx
+
         if self.scheduler is not None:
             loss = self.loss_fn(model=self.model, batch=batch, scheduler=self.scheduler, subsample_targets=self.subsample_targets)
         else:
@@ -185,3 +187,15 @@ def _batch_to_cpu(batch: Batch):
         for field in dataclasses.fields(batch)
     }
     return type(batch)(**batch_kwargs)
+
+def on_after_backward(self) -> None:
+        valid_gradients = True
+        for name, param in self.named_parameters():
+            if param.grad is not None:
+                valid_gradients = not (torch.isnan(param.grad).any() or torch.isinf(param.grad).any())
+                if not valid_gradients:
+                    break
+
+        if not valid_gradients:
+            warnings.warn(f'detected inf or nan values in gradients. not updating model parameters')
+            self.zero_grad()

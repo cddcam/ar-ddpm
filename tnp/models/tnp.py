@@ -1,6 +1,7 @@
 import torch
 from check_shapes import check_shapes
 from torch import nn
+from typing import Optional
 
 from ..networks.transformer import TNPTransformerEncoder
 from ..utils.helpers import preprocess_observations
@@ -34,10 +35,16 @@ class TNPEncoder(nn.Module):
         self.xy_encoder = xy_encoder
 
     @check_shapes(
-        "xc: [m, nc, dx]", "yc: [m, nc, dy]", "xt: [m, nt, dx]", "return: [m, n, dz]"
+        "xc: [m, nc, dx]", "yc: [m, nc, dy]", "xt: [m, nt, dx]", "pos_enc_c: [m, nc, emb]", "pos_enc_t: [m, nt, emb]", 
+        "return: [m, n, dz]"
     )
     def forward(
-        self, xc: torch.Tensor, yc: torch.Tensor, xt: torch.Tensor
+        self, 
+        xc: torch.Tensor, 
+        yc: torch.Tensor, 
+        xt: torch.Tensor, 
+        pos_enc_c: Optional[torch.Tensor] = None, 
+        pos_enc_t: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         yc, yt = preprocess_observations(xt, yc)
 
@@ -45,6 +52,10 @@ class TNPEncoder(nn.Module):
         zt = torch.cat((xt, yt), dim=-1)
         zc = self.xy_encoder(zc)
         zt = self.xy_encoder(zt)
+
+        if pos_enc_c is not None:
+            zc += pos_enc_c
+            zt += pos_enc_t
 
         zt = self.transformer_encoder(zc, zt)
         return zt
