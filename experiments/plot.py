@@ -259,6 +259,41 @@ def plot(
                         lw=2,
                         zorder=0,
                     )
+                elif batch.params[0] == "deterministic_polynomials":
+                    _, coefficients, noise_std = batch.params
+                    coefficients_tensor = torch.tensor(coefficients, device=x_plot.device).view(1, 1, 1, -1)
+                    powers = torch.arange(len(coefficients), device=x_plot.device).view(1, 1, 1, -1)
+                    x_powers = x_plot.unsqueeze(-1) ** powers
+                    # Compute the polynomial
+                    result = (x_powers * coefficients_tensor).sum(dim=-1)
+                    plt.plot(
+                        x_plot[0, :, 0].cpu(), 
+                        result[0, :, 0].cpu(), 
+                        "--",
+                        color="tab:purple",
+                        label="Ground truth",
+                        lw=2,
+                        zorder=0,
+                    )
+                    plt.plot(
+                        x_plot[0, :, 0].cpu(),
+                        result[0, :].cpu() + 2*noise_std,
+                        "--",
+                        color="tab:purple",
+                        lw=2,
+                        zorder=0,
+                    )
+
+                    plt.plot(
+                        x_plot[0, :, 0].cpu(),
+                        result[0, :].cpu() - 2*noise_std,
+                        "--",
+                        color="tab:purple",
+                        label="Ground truth",
+                        lw=2,
+                        zorder=0,
+                    )
+
 
 
             if plot_ar_mode:

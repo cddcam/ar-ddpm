@@ -5,7 +5,7 @@ generators:
     min_freq: 2
     max_freq: 4
     noise_std: 0.0
-    min_nc: 10
+    min_nc: 1
     max_nc: 32
     min_nt: 128
     max_nt: 128
@@ -19,7 +19,7 @@ generators:
     min_freq: 2
     max_freq: 4
     noise_std: 0.0
-    min_nc: 10
+    min_nc: 1
     max_nc: 32
     min_nt: 128
     max_nt: 128
@@ -33,8 +33,8 @@ generators:
     dim: ${params.dim_x}
     min_freq: 2
     max_freq: 4
-    noise_std: 0.025
-    min_nc: 10
+    noise_std: 0.0
+    min_nc: 1
     max_nc: 32
     min_nt: 128
     max_nt: 128
@@ -49,7 +49,7 @@ params:
   dim_y: 1
 
 misc:
-  project: sawtooth-1d-nonoise #noise0.025
+  project: sawtooth-1d-tnp
   eval_name: eval
   seed: 0
   only_plots: False

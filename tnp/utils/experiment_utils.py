@@ -274,7 +274,7 @@ def discrete_denoising_sampling(
     # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
     for t in range(len(scheduler) - 1, -1, -1):
         # Context becomes unnoised context + previous noised up targets 
-        # (from noise level above, hence we append tt + 1)
+        # (from noise level above, hence we append tt + 1 (index tt))
         yc_t = torch.cat([batch.yc, noised_samples], dim=1)
         xc_t = torch.cat([batch.xc, current_xt], dim=1)
         tc_t = torch.cat([tc, tt], dim=1)
@@ -375,7 +375,7 @@ def discrete_denoising_loglik(
             # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
             for t in range(len(scheduler) - 1, -1, -1):
                 # Context becomes unnoised context + previous noised up targets 
-                # (from noise level above, hence we append tt + 1)
+                # (from noise level above, hence we append tt + 1 (index tt))
                 yc_t = torch.cat([yc, noised_samples], dim=1)
                 xc_t = torch.cat([xc, current_xt], dim=1)
                 tc_t = torch.cat([tc, tt], dim=1)
@@ -448,7 +448,7 @@ def discrete_denoising_loglik(
         # Predict at each diffusion timestep, starting from t=T-1 up to t=0 (inclusive)
         for t in range(len(scheduler) - 1, -1, -1):
             # Context becomes unnoised context + previous noised up targets 
-            # (from noise level above, hence we append tt + 1)
+            # (from noise level above, hence we append tt + 1 (index tt))
             yc_t = torch.cat([yc, noised_samples], dim=1)
             xc_t = torch.cat([xc, current_xt], dim=1)
             tc_t = torch.cat([tc, tt], dim=1)
@@ -697,6 +697,7 @@ def create_default_config() -> DictConfig:
                 "_target_": "tnp.utils.experiment_utils.discrete_denoising_loglik",
                 "_partial_": True,
             },
+            "subsample_targets": False,
         }
     }
     return OmegaConf.create(default_config)
