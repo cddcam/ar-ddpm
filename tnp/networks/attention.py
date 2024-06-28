@@ -16,7 +16,6 @@ class BaseMultiHeadAttention(nn.Module, ABC):
         head_dim: int,
         p_dropout: float = 0.0,
         linear: bool = False,
-        # sub_LN: bool = False,
     ):
         super().__init__()
 
@@ -31,11 +30,8 @@ class BaseMultiHeadAttention(nn.Module, ABC):
         self.to_q = nn.Linear(qk_dim, inner_dim, bias=False)
         self.to_k = nn.Linear(qk_dim, inner_dim, bias=False)
         self.to_v = nn.Linear(v_dim, inner_dim, bias=False)
-        # norm_dim = inner_dim if project_out else v_dim
-        # self.sub_norm = nn.LayerNorm(norm_dim) if sub_LN else nn.Identity()
         self.to_out = (
             nn.Sequential(
-                # self.sub_norm,
                 nn.Linear(inner_dim, v_dim), 
                 nn.Dropout(p_dropout)
                 )

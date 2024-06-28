@@ -23,6 +23,7 @@ def main():
                 model=model,
                 batches=batches,
                 num_fig=min(5, len(batches)),
+                x_range=(0.0, 3.0),
                 plot_ar_mode=experiment.misc.plot_ar_mode,
                 num_ar_samples=20,
                 name=name,

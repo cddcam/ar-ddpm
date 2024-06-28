@@ -102,6 +102,7 @@ def main():
         batches = test_result["batch"]
         if "mean_loglik_joint" in test_result:
             print("Loglik joint", test_result["mean_loglik_joint"])
+        if "mean_gt_loglik_joint" in test_result:
             print("GT Loglik joint", test_result["mean_gt_loglik_joint"])
 
     else:

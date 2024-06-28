@@ -27,6 +27,7 @@ generators:
     max_nt: ${generators.common_settings.max_nt}
     samples_per_epoch: 4096
     batch_size: 16
+    deterministic: True
   test:
     _target_: tnp.data.det_poly.DetPolynomialGeneratorMixture
     generators:
@@ -39,13 +40,14 @@ generators:
     max_nc: 5
     min_nt: ${generators.common_settings.min_nt}
     max_nt: ${generators.common_settings.max_nt}
-    samples_per_epoch: 100
+    samples_per_epoch: 200
     batch_size: 16
+    deterministic: True
   poly1:
     _target_: tnp.data.det_poly.DetPolynomialGenerator
     dim: ${params.dim_x}
-    coefficients: [1, 0, 1]
-    noise_std: 1.0
+    coefficients: [0, 0, 0.7]
+    noise_std: 0.5
     min_nc: ${generators.common_settings.min_nc}
     max_nc: ${generators.common_settings.max_nc}
     min_nt: ${generators.common_settings.min_nt}
@@ -58,7 +60,7 @@ generators:
     _target_: tnp.data.det_poly.DetPolynomialGenerator
     dim: ${params.dim_x}
     coefficients: [0, 1]
-    noise_std: 1.0
+    noise_std: 0.5
     min_nc: ${generators.common_settings.min_nc}
     max_nc: ${generators.common_settings.max_nc}
     min_nt: ${generators.common_settings.min_nt}
@@ -70,8 +72,8 @@ generators:
   poly3:
     _target_: tnp.data.det_poly.DetPolynomialGenerator
     dim: ${params.dim_x}
-    coefficients: [0, -1]
-    noise_std: 1.0
+    coefficients: [0, -0.5]
+    noise_std: 0.5
     min_nc: ${generators.common_settings.min_nc}
     max_nc: ${generators.common_settings.max_nc}
     min_nt: ${generators.common_settings.min_nt}
@@ -85,8 +87,8 @@ generators:
     max_nc: 32
     min_nt: 128
     max_nt: 128
-    context_range: [[0.0, 7.0]]
-    target_range: [[0.0, 7.0]]
+    context_range: [[0.0, 3.0]]
+    target_range: [[0.0, 3.0]]
 
 params:
   dim_x: 1

@@ -22,15 +22,25 @@ class TETNPEncoder(nn.Module):
         self.y_encoder = y_encoder
 
     @check_shapes(
-        "xc: [m, nc, dx]", "yc: [m, nc, dy]", "xt: [m, nt, dx]", "return: [m, n, dz]"
+        "xc: [m, nc, dx]", "yc: [m, nc, dy]", "xt: [m, nt, dx]", "pos_enc_c: [m, nc, emb]", "pos_enc_t: [m, nt, emb]",
+        "return: [m, n, dz]"
     )
     def forward(
-        self, xc: torch.Tensor, yc: torch.Tensor, xt: torch.Tensor
+        self, 
+        xc: torch.Tensor, 
+        yc: torch.Tensor, 
+        xt: torch.Tensor,
+        pos_enc_c: Optional[torch.Tensor] = None, 
+        pos_enc_t: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         yc, yt = preprocess_observations(xt, yc)
 
         zc = self.y_encoder(yc)
         zt = self.y_encoder(yt)
+        
+        if pos_enc_c is not None:
+            zc += pos_enc_c
+            zt += pos_enc_t
 
         zt = self.transformer_encoder(zc, zt, xc, xt)
         return zt

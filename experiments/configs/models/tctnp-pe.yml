@@ -63,7 +63,7 @@ optimiser:
   lr: 5.0e-4
 
 params:
-  epochs: 200
+  epochs: 101
   embed_dim: 128
   num_heads: 8
   head_dim: 16
