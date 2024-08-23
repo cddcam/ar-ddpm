@@ -170,7 +170,7 @@ class InnerprodGaussianLikelihood(Likelihood):
         #         noise = 0.0
                 
         #     elif self.noise_type == "homo":
-        #         log_var = torch.clamp(self.noise_unconstrained[t], min=-5, max=10)
+        #         log_var = torch.clamp(self.noise_unconstrained[t], min=-3, max=10)
         #         noise = torch.nn.Softplus()(log_var)
         #         noise = noise[None, None].repeat(B, T)
 

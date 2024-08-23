@@ -230,9 +230,36 @@ class DDPMScheduler(BaseScheduler):
         # If using non-diagonal covariance (i.e. InnerprodGaussianLikelihood)
         if not isinstance(model_output, td.Normal):
             # For the noised up variables - sample, for the unnoised variable - return mean
-            if t > 0:
-                return model_output.rsample((1,))[0][..., None]
-            return model_output.mean[..., None]
+            if self.prediction_type == 'mean' or t == self.num_train_timesteps:    
+                if t > 0:
+                    return model_output.rsample((1,))[0][..., None]
+                return model_output.mean[..., None]
+            elif self.prediction_type == 'epsilon':
+                if t > 0:
+                    epsilon =  model_output.rsample((1,))[0][..., None]
+                else:
+                    epsilon = model_output.mean[..., None]
+                
+                sqrt_alpha_t = (1 - self.betas[t]) ** (0.5) 
+                return sample/sqrt_alpha_t - epsilon
+            elif self.prediction_type == 'sample':
+                if t > 0:
+                    x_0 =  model_output.rsample((1,))[0][..., None]
+                else:
+                    x_0 = model_output.mean[..., None]
+
+                self.alphas_cumprod = self.alphas_cumprod.to(device=sample.device)
+                # Append 1 for t=0 - this will affect the formulas for the multipliers below
+                alphas_cumprod = torch.cat([torch.tensor([1.0], device=sample.device), 
+                                            self.alphas_cumprod.to(dtype=sample.dtype)])
+                self.betas = self.betas.to(device=sample.device)
+                betas = self.betas.to(dtype=sample.dtype)
+
+                one_minus_alpha_prod = 1 - alphas_cumprod
+
+                sqrt_alphas = (1 - betas) ** 0.5
+
+                return x_0 + sqrt_alphas[t] * one_minus_alpha_prod[t] / one_minus_alpha_prod[t + 1] * sample 
 
         if self.variance_type in ["learned", "learned_range"]:
             model_output, predicted_variance = model_output.mean, model_output.variance
@@ -240,9 +267,36 @@ class DDPMScheduler(BaseScheduler):
             model_output = model_output.mean
             predicted_variance = None
 
-        if self.prediction_type == "mean":
+        if self.prediction_type == "sample":
+    
+            self.alphas_cumprod = self.alphas_cumprod.to(device=model_output.device)
+                # Append 1 for t=0 - this will affect the formulas for the multipliers below
+            alphas_cumprod = torch.cat([torch.tensor([1.0], device=model_output.device), 
+                                        self.alphas_cumprod.to(dtype=model_output.dtype)])
+            self.betas = self.betas.to(device=model_output.device)
+            betas = self.betas.to(dtype=model_output.dtype)
+
+            one_minus_alpha_prod = 1 - alphas_cumprod
+
+            sqrt_alphas = (1 - betas) ** 0.5
+
+            if t == self.num_train_timesteps:
+                pred_prev_sample = torch.sqrt(alphas_cumprod[t]) * model_output
+            else:
+                scaled_x_0 = torch.sqrt(alphas_cumprod[t])*betas[t]/one_minus_alpha_prod[t + 1] * model_output
+                scaled_x_t = sqrt_alphas[t] * one_minus_alpha_prod[t]/one_minus_alpha_prod[t + 1] * sample
+                pred_prev_sample = scaled_x_0 + scaled_x_t
+
+        elif self.prediction_type == "mean" or t == self.num_train_timesteps:
             pred_prev_sample = model_output
-        else:
+        elif self.prediction_type == 'epsilon':
+                one_minus_alpha_prod_t = 1 - self.alphas_cumprod[t]
+                beta_t = self.betas[t]
+                sqrt_alpha_t = (1 - beta_t) ** (0.5) 
+                pred_prev_sample = model_output * beta_t/one_minus_alpha_prod_t ** (0.5)
+                pred_prev_sample = (sample - pred_prev_sample)/sqrt_alpha_t 
+
+        else:        
             # TODO: add different ways for model parameterisation; does not work at the moment.
             # 1. compute alphas, betas
             alpha_prod_t = self.alphas_cumprod[t]
@@ -254,9 +308,7 @@ class DDPMScheduler(BaseScheduler):
 
             # 2. compute predicted original sample from predicted noise also called
             # "predicted x_0" of formula (15) from https://arxiv.org/pdf/2006.11239.pdf
-            if self.prediction_type == "epsilon":
-                pred_original_sample = (sample - beta_prod_t ** (0.5) * model_output) / alpha_prod_t ** (0.5)
-            elif self.prediction_type == "sample":
+            if self.prediction_type == "sample":
                 pred_original_sample = model_output
             elif self.prediction_type == "v_prediction":
                 pred_original_sample = (alpha_prod_t**0.5) * sample - (beta_prod_t**0.5) * model_output
@@ -330,6 +382,7 @@ class DDPMScheduler(BaseScheduler):
                    timesteps: torch.Tensor, 
                    noised_samples: torch.FloatTensor = None,
                    mask_targets: torch.LongTensor = None,
+                   noise: torch.FloatTensor = None,
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
         """
         Get the true posterior mean and variance when conditioning on the original
@@ -370,17 +423,31 @@ class DDPMScheduler(BaseScheduler):
         if timesteps[0, 0] != self.num_train_timesteps:
             # Eq. (7) from DDPM, except that sqrt_alpha_prod and one_minus_alpha_prod have 
             # been shifted by 1 by appending 1 for t=0
-            original_samples_multiplier = ((sqrt_alpha_prod[timesteps] * betas[timesteps]) /
-                                        one_minus_alpha_prod[timesteps + 1])
-            while len(original_samples_multiplier.shape) < len(original_samples.shape):
-                original_samples_multiplier = original_samples_multiplier.unsqueeze(-1)
+            if self.prediction_type == 'mean':
+                original_samples_multiplier = ((sqrt_alpha_prod[timesteps] * betas[timesteps]) /
+                                            one_minus_alpha_prod[timesteps + 1])
+                while len(original_samples_multiplier.shape) < len(original_samples.shape):
+                    original_samples_multiplier = original_samples_multiplier.unsqueeze(-1)
 
-            noised_samples_multiplier = (sqrt_alphas[timesteps] * one_minus_alpha_prod[timesteps] /
-                                        one_minus_alpha_prod[timesteps + 1])
-            while len(noised_samples_multiplier.shape) < len(original_samples.shape):
-                noised_samples_multiplier = noised_samples_multiplier.unsqueeze(-1)
+                noised_samples_multiplier = (sqrt_alphas[timesteps] * one_minus_alpha_prod[timesteps] /
+                                            one_minus_alpha_prod[timesteps + 1])
+                while len(noised_samples_multiplier.shape) < len(original_samples.shape):
+                    noised_samples_multiplier = noised_samples_multiplier.unsqueeze(-1)
+                
+                mu = original_samples_multiplier * original_samples + noised_samples_multiplier * noised_samples
+            elif self.prediction_type == 'epsilon':
+                noise_multiplier = betas[timesteps]/(sqrt_alphas[timesteps]*torch.sqrt(one_minus_alpha_prod[timesteps + 1]))
+                while len(noise_multiplier.shape) < len(noise.shape):
+                    noise_multiplier = noise_multiplier.unsqueeze(-1)
+                mu = noise_multiplier * noise
             
-            mu = original_samples_multiplier * original_samples + noised_samples_multiplier * noised_samples
+            elif self.prediction_type == 'sample':
+                original_samples_multiplier = ((sqrt_alpha_prod[timesteps] * betas[timesteps]) /
+                                            one_minus_alpha_prod[timesteps + 1])
+                while len(original_samples_multiplier.shape) < len(original_samples.shape):
+                    original_samples_multiplier = original_samples_multiplier.unsqueeze(-1)
+                
+                mu = original_samples_multiplier * original_samples
 
             var = one_minus_alpha_prod[timesteps]/one_minus_alpha_prod[timesteps + 1] * betas[timesteps]
 
@@ -429,6 +496,49 @@ class DDPMScheduler(BaseScheduler):
             prev_t = timestep - max(1, self.num_train_timesteps) // max(1, num_inference_steps)
 
         return prev_t
+    
+    def scale_predictive_distribution(self, pred_dist, timesteps, prediction=False, noised_targets=None):
+        self.alphas_cumprod = self.alphas_cumprod.to(device=timesteps.device)
+        # Append 1 for t=0 - this will affect the formulas for the multipliers below
+        alphas_cumprod = torch.cat([torch.tensor([1.0], device=timesteps.device), 
+                                    self.alphas_cumprod.to(dtype=pred_dist.mean.dtype)])
+        self.betas = self.betas.to(device=timesteps.device)
+        betas = self.betas.to(dtype=pred_dist.mean.dtype)
+
+        one_minus_alpha_prod = 1 - alphas_cumprod
+
+        sqrt_alphas = (1 - betas) ** 0.5
+        
+        if self.prediction_type == 'epsilon' and timesteps[0, 0] != self.num_train_timesteps:
+            
+            while len(pred_dist.mean.shape) > len(timesteps.shape):
+                timesteps = timesteps.unsqueeze(-1)
+
+            mean = pred_dist.mean * betas[timesteps]/torch.sqrt(one_minus_alpha_prod[timesteps + 1])
+            mean = mean/sqrt_alphas[timesteps]
+            if prediction:
+                mean = noised_targets/sqrt_alphas[timesteps] - mean 
+            if isinstance(pred_dist, td.Normal):
+                return td.Normal(mean, pred_dist.scale)
+            return pred_dist 
+        elif self.prediction_type == 'sample':
+
+            if timesteps[0, 0] == self.num_train_timesteps:
+                while len(pred_dist.mean.shape) > len(timesteps.shape):
+                    timesteps = timesteps.unsqueeze(-1)
+                
+                mean = pred_dist.mean * torch.sqrt(alphas_cumprod[timesteps])
+            else:
+                while len(pred_dist.mean.shape) > len(timesteps.shape):
+                    timesteps = timesteps.unsqueeze(-1)
+                
+                mean = pred_dist.mean * torch.sqrt(alphas_cumprod[timesteps]) * betas[timesteps]
+                mean = mean / (one_minus_alpha_prod[timesteps + 1])
+            if isinstance(pred_dist, td.Normal):
+                return td.Normal(mean, pred_dist.scale)
+            return pred_dist 
+        
+        return pred_dist
 
 
     # def get_velocity(

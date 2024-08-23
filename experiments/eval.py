@@ -1,6 +1,8 @@
 import lightning.pytorch as pl
 import torch
 from plot import plot
+from plot_image import plot_image
+import os
 
 import wandb
 from tnp.utils.experiment_utils import (initialize_evaluation, 
@@ -35,21 +37,35 @@ def main():
 
         eval_name = wandb.run.name + "/" + eval_name
 
-        plot(model=model,
-            scheduler=scheduler,
-            batches=batches,
-            num_fig=min(experiment.misc.num_plots, len(batches)),
-            name=eval_name,
-            savefig=experiment.misc.savefig,
-            logging=experiment.misc.logging,
-            y_lim=(-2.5, 2.5),
-            x_range=(-4 + experiment.misc.eps, 4 + experiment.misc.eps),
-            figsize=(10, 6),
-            plot_target=False,
-            pred_fn=discrete_denoising_sampling,
-            test_sampling=True,
-            subsample_targets=experiment.misc.subsample_test_targets,
-        )
+        if experiment.params.dim_x == 2:
+            plot_image(
+                model=model, 
+                batches=batches,
+                num_fig=min(5, len(batches)),
+                name=eval_name,
+                pred_fn=discrete_denoising_sampling,
+                scheduler=scheduler,
+                subsample_targets=experiment.misc.subsample_targets,
+                test_sampling=True,
+            )
+        elif experiment.params.dim_x == 1:
+            plot(model=model,
+                scheduler=scheduler,
+                batches=batches,
+                num_fig=min(experiment.misc.num_plots, len(batches)),
+                name=eval_name,
+                savefig=experiment.misc.savefig,
+                logging=experiment.misc.logging,
+                y_lim=(-2.5, 2.5),
+                x_range=(-4 + experiment.misc.eps, 4 + experiment.misc.eps),
+                figsize=(10, 6),
+                plot_target=False,
+                pred_fn=discrete_denoising_sampling,
+                test_sampling=True,
+                subsample_targets=experiment.misc.subsample_test_targets,
+            )
+        else:
+            NotImplementedError('Plotting function for this type of data is not implemented.')
 
         return
 
@@ -75,6 +91,7 @@ def main():
                 num_samples=experiment.misc.num_loglik_samples,
                 split_batch=experiment.misc.split_batch,
                 subsample_test_targets=experiment.misc.subsample_test_targets,
+                max_batch_size=experiment.misc.max_batch_size,
                 )
         trainer = pl.Trainer(devices=1)
         trainer.test(model=lit_model, dataloaders=gen_test)
@@ -102,6 +119,7 @@ def main():
         batches = test_result["batch"]
         if "mean_loglik_joint" in test_result:
             print("Loglik joint", test_result["mean_loglik_joint"])
+        if "mean_gt_loglik_joint" in test_result:
             print("GT Loglik joint", test_result["mean_gt_loglik_joint"])
 
     else:
@@ -117,6 +135,8 @@ def main():
         wandb.run.summary["num_params"] = num_params
         wandb.run.summary[f"test/{eval_name}/loglik"] = test_result["mean_loglik"]
         wandb.run.summary[f"test/{eval_name}/std_loglik"] = test_result["std_loglik"]
+        # torch.save(loglik, os.path.join(wandb.run.dir, "logliks.pt"))
+        # torch.save(test_result['batch'], os.path.join(wandb.run.dir, 'test_batch.pt'))
         if "mean_gt_loglik" in test_result:
             wandb.run.summary[f"test/{eval_name}/gt_loglik"] = test_result["mean_gt_loglik"]
             wandb.run.summary[f"test/{eval_name}/std_gt_loglik"] = test_result[
@@ -132,17 +152,32 @@ def main():
             wandb.run.summary[f"test/{eval_name}/std_loglik_joint"] = test_result[
                 "std_loglik_joint"
             ]
-            
-    plot(model=model,
-        scheduler=scheduler,
-        batches=batches,
-        num_fig=min(experiment.misc.num_plots, len(batches)),
-        name=f"test/{eval_name}",
-        plot_target=False,
-        pred_fn=discrete_denoising_sampling,
-        test_sampling=True,
-        subsample_targets=experiment.misc.subsample_test_targets,
-    )
+
+    if experiment.params.dim_x == 2:
+        plot_image(
+                model=model, 
+                batches=batches,
+                num_fig=min(5, len(batches)),
+                name=f"test/{eval_name}",
+                pred_fn=discrete_denoising_sampling,
+                scheduler=scheduler,
+                subsample_targets=experiment.misc.subsample_targets,
+                test_sampling=True,
+            )
+    elif experiment.params.dim_x == 1:       
+        plot(model=model,
+            scheduler=scheduler,
+            batches=batches,
+            num_fig=min(experiment.misc.num_plots, len(batches)),
+            name=f"test/{eval_name}",
+            plot_target=False,
+            pred_fn=discrete_denoising_sampling,
+            test_sampling=True,
+            subsample_targets=experiment.misc.subsample_test_targets,
+            x_range=(-2.0, 2.0),
+        )
+    else:
+        NotImplementedError('Plotting function for this type of data is not implemented.')
 
 
 if __name__ == "__main__":

@@ -79,7 +79,7 @@ def plot(
             else:
                 with torch.no_grad():
                     if test_sampling:
-                        noised_samples_history, plot_distributions = pred_fn(
+                        noised_samples_history, plot_distributions, _ = pred_fn(
                             model, 
                             batch, 
                             scheduler, 
@@ -92,8 +92,9 @@ def plot(
                             noised_targets = None
                         y_t_pred_dist = noised_samples_history[-1]
                         tt = 0
+                        mask_targets = None
                     else:
-                        y_t_pred_dist, y_plot_pred_dist, noised_targets, tt = pred_fn(
+                        y_t_pred_dist, y_plot_pred_dist, noised_targets, mask_targets, tt = pred_fn(
                             model, batch, scheduler, x_plot
                         )
                         tt = tt[0].cpu().numpy()
@@ -118,25 +119,42 @@ def plot(
                 zorder=4,
             )
 
-            try:
-                if noised_targets is not None:
-                    plt.scatter(
-                            xt[0, :, 0][::2**(tt + 1)].cpu().numpy(),
-                            noised_targets[0, :, 0].cpu().numpy(),
-                            c="g",
-                            label="Noised Target",
-                            s=30,
-                            zorder=3,
-                        )
-            except:
+            if noised_targets is not None and subsample_targets and test_sampling:
                 plt.scatter(
-                            xt[0, :, 0].cpu().numpy(),
-                            noised_targets[0, :, 0].cpu().numpy(),
-                            c="g",
-                            label="Noised Target",
-                            s=30,
-                            zorder=3,
-                        )
+                    xt[0, :, 0][::2**(tt + 1)].cpu().numpy(),
+                    noised_targets[0, :, 0].cpu().numpy(),
+                    c="g",
+                    label="Noised Target",
+                    s=30,
+                    zorder=3,
+                )
+            elif noised_targets is not None and not subsample_targets and test_sampling:
+                plt.scatter(
+                    xt[0, :, 0].cpu().numpy(),
+                    noised_targets[0, :, 0].cpu().numpy(),
+                    c="g",
+                    label="Noised Target",
+                    s=30,
+                    zorder=3,
+                )
+            elif noised_targets is not None and not test_sampling and mask_targets is not None:
+                plt.scatter(
+                    xt[0, mask_targets, 0].cpu().numpy(),
+                    noised_targets[0, mask_targets, 0].cpu().numpy(),
+                    c="g",
+                    label="Noised Target",
+                    s=30,
+                    zorder=3,
+                )
+            elif noised_targets is not None and not test_sampling and mask_targets is None:
+                plt.scatter(
+                    xt[0, :, 0].cpu().numpy(),
+                    noised_targets[0, :, 0].cpu().numpy(),
+                    c="g",
+                    label="Noised Target",
+                    s=30,
+                    zorder=3,
+                )
 
             if plot_target:
                 plt.scatter(

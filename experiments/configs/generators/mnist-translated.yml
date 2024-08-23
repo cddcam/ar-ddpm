@@ -32,6 +32,22 @@ generators:
     samples_per_epoch: 4096
     batch_size: 16
     return_as_gridded: False
+  test:
+    _target_: tnp.data.mnist.TranslatedMNISTGenerator
+    min_prop_ctx: 0.01
+    max_prop_ctx: 0.3
+    data_dir: /scratches/landau_2/datasets/ar_ddpm
+    train: False
+    download: True
+    zero_shot: False
+    max_translation: [14, 14]
+    stationary_image_size: [56, 56, 1]
+    translated_image_size: [56, 56, 1]
+    x_mean: [27.5000, 27.5000]
+    x_std: [16.1658, 16.1658]
+    samples_per_epoch: 4096
+    batch_size: 1
+    return_as_gridded: False
 
 params:
   dim_x: 2
@@ -39,8 +55,9 @@ params:
 
 misc:
   project: mnist-translated
-  num_loglik_samples: 100
+  num_loglik_samples: 500
   split_batch: True
+  max_batch_size: 50
   eval_name: eval
   seed: 0
   only_plots: False
@@ -50,4 +67,7 @@ misc:
   logging: True
   lightning_eval: True
   ar_prediction: False
-  subsample_test_targets: True
+  plot_ar_mode: False
+  plot_interval: 50
+  subsample_targets: False
+  subsample_test_targets: False

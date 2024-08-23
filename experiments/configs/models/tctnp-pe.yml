@@ -63,7 +63,7 @@ optimiser:
   lr: 5.0e-4
 
 params:
-  epochs: 200
+  epochs: 400
   embed_dim: 128
   num_heads: 8
   head_dim: 16
@@ -72,11 +72,7 @@ params:
   fourier_dim: 0
 
 misc:
-  name: TNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-TS${scheduler.num_train_timesteps}-beta${scheduler.beta_start}-PE
+  name: TNP-PE-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-TS${scheduler.num_train_timesteps}-beta${scheduler.beta_start}
   resume_from_checkpoint: null
-  plot_ar_mode: False
   gradient_clip_val: 0.5
-  plot_interval: 50
-  logging: True
-  subsample_targets: True
-  split_batch: True
+  wandb_path: '/scratches/landau_2/ar-ddpm/'

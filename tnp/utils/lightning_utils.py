@@ -28,6 +28,7 @@ class LitWrapper(pl.LightningModule):
         num_samples: int = 1,
         split_batch: bool = False,
         subsample_test_targets: bool = False,
+        max_batch_size: int = 500, 
     ):
         super().__init__()
 
@@ -49,6 +50,7 @@ class LitWrapper(pl.LightningModule):
         self.val_outputs: List[Any] = []
         self.test_outputs: List[Any] = []
         self.train_losses: List[Any] = []
+        self.max_batch_size = max_batch_size
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
@@ -59,7 +61,7 @@ class LitWrapper(pl.LightningModule):
         _ = batch_idx
 
         if self.scheduler is not None:
-            loss = self.loss_fn(
+            loss, tt = self.loss_fn(
                 model=self.model, 
                 batch=batch, 
                 scheduler=self.scheduler, 
@@ -68,6 +70,7 @@ class LitWrapper(pl.LightningModule):
         else:
             loss = self.loss_fn(self.model, batch)
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log(f"train/loss_{tt}", loss, on_step=True, on_epoch=True, prog_bar=False)
         self.train_losses.append(loss.detach().cpu())
         return loss
 
@@ -79,7 +82,7 @@ class LitWrapper(pl.LightningModule):
         # pred_dist = self.pred_fn(self.model, batch)
         # loglik = pred_dist.log_prob(batch.yt).sum() / batch.yt[..., 0].numel()
         if self.scheduler is not None:
-            loglik = -self.loss_fn(model=self.model, batch=batch, scheduler=self.scheduler, subsample_targets=self.subsample_targets)
+            loglik = -self.loss_fn(model=self.model, batch=batch, scheduler=self.scheduler, subsample_targets=self.subsample_targets)[0]
         else:
             loglik = -self.loss_fn(self.model, batch)
         result["loglik"] = loglik.cpu()
@@ -94,7 +97,7 @@ class LitWrapper(pl.LightningModule):
         self.val_outputs.append(result)
 
     def test_step(  # pylint: disable=arguments-differ
-        self, batch: Batch, batch_idx: int
+        self, batch: Batch, batch_idx: int,
     ) -> None:
         _ = batch_idx
         result = {"batch": _batch_to_cpu(batch)}
@@ -107,6 +110,7 @@ class LitWrapper(pl.LightningModule):
             num_samples=self.num_samples,
             split_batch=self.split_batch,
             subsample_targets=self.subsample_test_targets,
+            max_batch_size = self.max_batch_size,
         )
         result["loglik"] = loglik.cpu()
         if loglik_joint is not None:
