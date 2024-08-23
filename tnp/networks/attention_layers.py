@@ -23,7 +23,6 @@ class BaseMultiHeadAttentionLayer(nn.Module, ABC):
         p_dropout: float = 0.0,
         activation: nn.Module = nn.ReLU(),
         norm_first: bool = False,
-        # sub_LN: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -31,9 +30,7 @@ class BaseMultiHeadAttentionLayer(nn.Module, ABC):
 
         self.embed_dim = embed_dim
         self.attn = attention(**kwargs)
-        #self.attn = attention(sub_LN=sub_LN, **kwargs)
 
-        # self.sub_norm = nn.LayerNorm(feedforward_dim) if sub_LN else nn.Identity()
         # Feedforward model.
         self.ff_block = nn.Sequential(
             nn.Linear(embed_dim, feedforward_dim),
